@@ -1,0 +1,24 @@
+# Dev image for the ingestion pipeline (scrape → extract → load). Pins Python
+# 3.14 + uv so the host needs neither. Source is bind-mounted at runtime; the
+# venv lives at /opt/venv, OUTSIDE the mount, so the host dir doesn't shadow it.
+#
+# Note: this installs the Playwright *Python package* but not the browser
+# binaries (those are ~hundreds of MB). The first real scrape installs them with
+# `playwright install chromium`; key-check and tests don't need them.
+FROM python:3.14-slim
+
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_COMPILE_BYTECODE=1 \
+    PYTHONUNBUFFERED=1
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+RUN uv sync --extra dev
+
+COPY . .
+
+# No long-running process — this image is driven by `docker compose run`
+# (key check, tests, the ingest batch). Default to the preflight key check.
+CMD ["uv", "run", "python", "-m", "cip_ingest.preflight"]

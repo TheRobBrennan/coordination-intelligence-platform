@@ -11,6 +11,12 @@
 #   api       — FastAPI read API (http://localhost:8000), hot-reload via bind mount
 #   web       — Next.js UI (http://localhost:3000) — behind the "web" profile;
 #               enable once apps/web is scaffolded:  docker compose --profile web up
+#   ingest    — Python scrape→extract→load (behind the "ingest" profile; run on demand)
+#
+# `name:` groups every container under "coordination-intelligence-platform" in
+# Docker Desktop, so it's easy to scan apart from other projects on your machine.
+name: coordination-intelligence-platform
+
 services:
   neo4j:
     image: neo4j:2026.05-community
@@ -77,9 +83,21 @@ services:
       API_CORS_ORIGINS: http://localhost:3000
       # macOS bind-mount file events can be missed — poll so --reload is reliable.
       WATCHFILES_FORCE_POLLING: "true"
+      # Where profile images live inside the container (see AVATARS_DIR below).
+      AVATARS_DIR: /srv/avatars
     volumes:
       - ../apps/api:/app           # live source for hot reload
       # Keep the container's venv (built at /opt/venv) out of the bind mount.
+      # Profile images, mapped from a host folder. Point AVATARS_DIR (in .env) at
+      # any path — a folder on this Mac, or a mount from a Docker host / VM.
+      - ${AVATARS_DIR:-../assets/avatars}:/srv/avatars:ro
+    healthcheck:
+      # python is in the image (no curl/wget in slim) — hit the health route.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   web:
     profiles: ["web"]              # only starts with: docker compose --profile web up
@@ -88,7 +106,8 @@ services:
       dockerfile: Dockerfile.dev
     container_name: cip-web
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
@@ -97,6 +116,23 @@ services:
     volumes:
       - ../apps/web:/app
       - /app/node_modules          # anonymous volume — don't let host shadow deps
+
+  ingest:
+    profiles: ["ingest"]           # never auto-starts; run on demand via `make ...`
+    build:
+      context: ../ingestion
+      dockerfile: Dockerfile.dev
+    container_name: cip-ingest
+    env_file:
+      - path: ../.env              # ANTHROPIC_API_KEY, LLM_* — optional so a
+        required: false            # missing .env doesn't break `docker compose`
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-devpassword}
+      NEO4J_DATABASE: neo4j
+    volumes:
+      - ../ingestion:/app          # live source; diagnostics land in ./ingestion/diagnostics
 
 volumes:
   neo4j_data:

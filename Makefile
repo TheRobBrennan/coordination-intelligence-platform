@@ -2,40 +2,45 @@
 # Desktop (make ships with macOS / the Xcode command-line tools). Every toolchain
 # — Neo4j, Keycloak, Python, Node, pnpm — runs inside containers.
 #
-#   make up        bring the whole stack up (Neo4j + Keycloak + API), hot reload
-#   make up-web    same, plus the Next.js web app (needs apps/web scaffolded)
-#   make down      stop everything
-#   make build     rebuild images from scratch (no cache) + recreate
-#   make clean     stop and wipe data volumes + built images (fresh slate)
-#   make logs      tail logs from all services
-#   make ps        show running services
-#   make test      run the API test suite inside the api container
+# Run `make` with no target to see this list.
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 
-.PHONY: up up-web down build clean logs ps test
+.DEFAULT_GOAL := help
+.PHONY: help up up-web down build clean logs ps check test test-ingest
 
-up:
+help:  ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
+
+up:  ## Bring the stack up (Neo4j + Keycloak + API), hot reload. Ctrl+C stops.
 	$(COMPOSE) up --build
 
-down:
-	$(COMPOSE) down
-
-up-web:
+up-web:  ## Same as up, plus the Next.js web app (needs apps/web scaffolded)
 	$(COMPOSE) --profile web up --build
 
-build:
+down:  ## Stop everything
+	$(COMPOSE) down
+
+build:  ## Rebuild all images from scratch (no cache) and recreate containers
 	$(COMPOSE) build --no-cache
 	$(COMPOSE) up -d --force-recreate
 
-clean:
+clean:  ## Stop and wipe data volumes + built images (fresh slate)
 	$(COMPOSE) down -v --rmi local
 
-logs:
+logs:  ## Tail logs from all running services
 	$(COMPOSE) logs -f
 
-ps:
+ps:  ## Show running services
 	$(COMPOSE) ps
 
-test:
+check:  ## Verify the LLM API key is set & valid (writes a help file if not)
+	$(COMPOSE) --profile ingest run --rm --no-deps ingest \
+	  uv run python -m cip_ingest.preflight --validate
+
+test:  ## Run the API test suite in the api container
 	$(COMPOSE) run --rm --no-deps api uv run pytest
+
+test-ingest:  ## Run the ingestion test suite in the ingest container
+	$(COMPOSE) --profile ingest run --rm --no-deps ingest uv run pytest

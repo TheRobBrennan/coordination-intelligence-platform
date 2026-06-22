@@ -25,6 +25,10 @@ ingestion/.cache/
 ingestion/output/
 *.local
 
+# diagnostics (timestamped help files written by the preflight check)
+diagnostics/
+**/diagnostics/
+
 # os / editor
 .DS_Store
 .idea/

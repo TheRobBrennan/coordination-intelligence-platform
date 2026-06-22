@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "convention": "key = Keycloak username; value = image filename in this folder.",
+    "note": "Placeholder SVGs for the seed users. Drop in real images (png/jpg/svg, square ~256px) named <username>.<ext> and update this map."
+  },
+  "avatars": {
+    "rob": "rob.svg",
+    "kathy": "kathy.svg"
+  }
+}
