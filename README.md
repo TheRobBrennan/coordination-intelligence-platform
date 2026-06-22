@@ -35,6 +35,10 @@ cd apps/api && uv sync && cd ../..    # api deps (one-time)
 pnpm start                    # ← brings up everything (see below)
 ```
 
+> **New to pnpm?** It's npm with a faster store and a few renamed commands
+> (`npx` → `pnpm dlx`, lockfile is `pnpm-lock.yaml`). Full crossover guide:
+> [`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md).
+
 ## Local development — one command up, one command down
 
 Docker holds only the **slow services** (Neo4j + Keycloak). The API and web app

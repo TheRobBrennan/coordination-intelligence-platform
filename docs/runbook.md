@@ -1,7 +1,7 @@
 # Coordination Intelligence Platform — Runbook
 
 ## 0. Prereqs
-- Docker, Python 3.12+ (`uv` recommended), Node 20+ (`pnpm`).
+- Docker, Python 3.12+ (`uv` recommended), Node 20+ (`pnpm` — new to it? see [pnpm-for-npm-users.md](pnpm-for-npm-users.md)).
 - An LLM key: `ANTHROPIC_API_KEY` (default) or OpenAI/Azure if you flip `LLM_PROVIDER`.
 
 ## 1. Bring up infra
