@@ -86,6 +86,14 @@ not been smoke-tested. Work through them rather than papering over with
 fallbacks; flag anything in `docs/` that turns out to be wrong so it gets
 corrected at the source.
 
+## Git workflow
+
+- **Branch naming:** `YYYY.MM.DD/short-description`, e.g.
+  `2026.06.22/update-claude-md` — date the branch was created, then a short
+  kebab-case description of the work. Don't use plain feature-name branches
+  (`feature/x`, `fix-y`) without the date prefix.
+- Branch off `main`, open a PR against `main` when ready.
+
 ## Conventions
 
 - **Env-driven, nothing hardcoded.** Every endpoint/key/provider is in
