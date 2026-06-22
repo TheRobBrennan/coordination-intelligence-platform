@@ -1,69 +1,65 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
-const KEYCLOAK_BASE = process.env.KEYCLOAK_ISSUER?.replace(/\/realms\/.*/, "") ?? "http://localhost:8080";
-const ADMIN_USER = process.env.KC_ADMIN ?? "admin";
-const ADMIN_PASSWORD = process.env.KC_ADMIN_PASSWORD ?? "admin";
+// Seed value from infra/keycloak/realm-export.json (temporary: false, so this
+// should be a one-shot login with no forced reset). NEW_PASSWORD is only used
+// as a fallback: if a prior run's defensive reset-form branch below ever did
+// fire and changed rob's password, retry against that value instead of the
+// stale seed one — self-healing without needing Keycloak admin API calls.
 const SEED_PASSWORD = "demo";
+const NEW_PASSWORD = "DevLocal!2026";
 
-// Reset rob's credential back to the seeded "demo"/temporary=false state via
-// Keycloak's admin API, so this test is rerunnable without a full realm
-// reimport even if a manual password change happened in between.
-async function resetRobPassword() {
-  const tokenRes = await fetch(`${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "password",
-      client_id: "admin-cli",
-      username: ADMIN_USER,
-      password: ADMIN_PASSWORD,
-    }),
-  });
-  const { access_token } = await tokenRes.json();
-
-  const usersRes = await fetch(`${KEYCLOAK_BASE}/admin/realms/platform/users?username=rob`, {
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-  const [rob] = await usersRes.json();
-
-  await fetch(`${KEYCLOAK_BASE}/admin/realms/platform/users/${rob.id}/reset-password`, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "password", value: SEED_PASSWORD, temporary: false }),
-  });
+async function fillAndSubmitLogin(page: Page, password: string) {
+  await page.getByLabel("Username or email").fill("rob");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In" }).click();
 }
 
-test.beforeAll(resetRobPassword);
-
-// Verifies the full Keycloak sign-in flow against the real realm seeded by
-// infra/keycloak/realm-export.json. The seed credential is not temporary, so
-// this should be a one-shot login with no forced password-reset step — the
-// defensive check below just guards against that ever silently regressing
-// (e.g. someone flips the seed back to temporary=true).
-test("user can sign in via Keycloak and see their session", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
-
-  await page.waitForURL(/\/realms\/platform\/protocol\/openid-connect\/auth/);
-  await page.getByLabel("Username or email").fill("rob");
-  await page.getByLabel("Password", { exact: true }).fill(SEED_PASSWORD);
-  await page.getByRole("button", { name: "Sign In" }).click();
-
-  // Defensive only: isVisible() doesn't wait/retry, so use waitFor() to give
-  // the page a chance to navigate before deciding whether a reset form (it
-  // shouldn't) appeared.
+// Forced password-reset step shouldn't fire (seed isn't temporary) — this is
+// a defensive guard against that ever silently regressing, e.g. someone flips
+// the seed back to temporary: true. waitFor() (not isVisible(), which doesn't
+// wait/retry) gives the page a chance to navigate before deciding.
+async function handlePasswordResetIfPresent(page: Page, password: string) {
   const newPassword = page.getByLabel("New Password", { exact: true });
   const hasPasswordReset = await newPassword
     .waitFor({ state: "visible", timeout: 2000 })
     .then(() => true)
     .catch(() => false);
   if (hasPasswordReset) {
-    await newPassword.fill("DevLocal!2026");
-    await page.getByLabel("Confirm password", { exact: true }).fill("DevLocal!2026");
+    await newPassword.fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Submit" }).click();
   }
+}
+
+test("user can sign in via Keycloak, see their session, and sign out", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
+  await page.waitForURL(/\/realms\/platform\/protocol\/openid-connect\/auth/);
+
+  await fillAndSubmitLogin(page, SEED_PASSWORD);
+
+  // If the seed password is stale (e.g. a previous run's reset-form branch
+  // changed it), Keycloak re-renders the same login form with an inline
+  // error instead of erroring the request — retry once against the password
+  // this suite itself would have changed it to.
+  const invalidCredentials = await page
+    .getByText(/Invalid username or password/i)
+    .waitFor({ state: "visible", timeout: 3000 })
+    .then(() => true)
+    .catch(() => false);
+  const activePassword = invalidCredentials ? NEW_PASSWORD : SEED_PASSWORD;
+  if (invalidCredentials) {
+    await fillAndSubmitLogin(page, activePassword);
+  }
+
+  await handlePasswordResetIfPresent(page, NEW_PASSWORD);
 
   await page.waitForURL("http://localhost:3000/");
   await expect(page.getByText(/Signed in as/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+
+  const signOutButton = page.getByRole("button", { name: "Sign out" });
+  await expect(signOutButton).toBeVisible();
+  await signOutButton.click();
+
+  await expect(page.getByRole("button", { name: "Sign in with Keycloak" })).toBeVisible();
 });

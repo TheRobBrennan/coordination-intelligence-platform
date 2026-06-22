@@ -23,15 +23,15 @@ up:  ## Bring the stack up (Neo4j + Keycloak + API), hot reload. Ctrl+C stops.
 up-web:  ## Same as up, plus the Next.js web app (needs apps/web scaffolded)
 	$(COMPOSE) --profile web up --build
 
-down:  ## Stop everything
-	$(COMPOSE) down
+down:  ## Stop everything (including the web/ingest profiles, if running)
+	$(COMPOSE) --profile web --profile ingest down
 
 build:  ## Rebuild all images from scratch (no cache) and recreate containers
 	$(COMPOSE) build --no-cache
 	$(COMPOSE) up -d --force-recreate
 
-clean:  ## Stop and wipe data volumes + built images (fresh slate)
-	$(COMPOSE) down -v --rmi local
+clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles)
+	$(COMPOSE) --profile web --profile ingest down -v --rmi local
 
 logs:  ## Tail logs from all running services
 	$(COMPOSE) logs -f
