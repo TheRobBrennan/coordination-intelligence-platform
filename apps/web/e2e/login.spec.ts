@@ -8,8 +8,8 @@ import { test, expect, type Page } from "@playwright/test";
 const SEED_PASSWORD = "demo";
 const NEW_PASSWORD = "DevLocal!2026";
 
-async function fillAndSubmitLogin(page: Page, password: string) {
-  await page.getByLabel("Username or email").fill("rob");
+async function fillAndSubmitLogin(page: Page, username: string, password: string) {
+  await page.getByLabel("Username or email").fill(username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
 }
@@ -31,30 +31,32 @@ async function handlePasswordResetIfPresent(page: Page, password: string) {
   }
 }
 
-test("user can sign in via Keycloak, see their session, and sign out", async ({ page }) => {
+// Click "Sign in with Keycloak" from the home page and complete the login
+// form, retrying once with NEW_PASSWORD if the seed password turns out to be
+// stale (see the module comment above).
+async function signInFromHome(page: Page, username: string) {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
   await page.waitForURL(/\/realms\/platform\/protocol\/openid-connect\/auth/);
 
-  await fillAndSubmitLogin(page, SEED_PASSWORD);
+  await fillAndSubmitLogin(page, username, SEED_PASSWORD);
 
-  // If the seed password is stale (e.g. a previous run's reset-form branch
-  // changed it), Keycloak re-renders the same login form with an inline
-  // error instead of erroring the request — retry once against the password
-  // this suite itself would have changed it to.
   const invalidCredentials = await page
     .getByText(/Invalid username or password/i)
     .waitFor({ state: "visible", timeout: 3000 })
     .then(() => true)
     .catch(() => false);
-  const activePassword = invalidCredentials ? NEW_PASSWORD : SEED_PASSWORD;
   if (invalidCredentials) {
-    await fillAndSubmitLogin(page, activePassword);
+    await fillAndSubmitLogin(page, username, NEW_PASSWORD);
   }
 
   await handlePasswordResetIfPresent(page, NEW_PASSWORD);
-
   await page.waitForURL("http://localhost:3000/");
+}
+
+test("user can sign in via Keycloak, see their session, and sign out", async ({ page }) => {
+  await signInFromHome(page, "rob");
+
   await expect(page.getByText(/Signed in as/)).toBeVisible();
 
   const signOutButton = page.getByRole("button", { name: "Sign out" });
@@ -62,4 +64,36 @@ test("user can sign in via Keycloak, see their session, and sign out", async ({ 
   await signOutButton.click();
 
   await expect(page.getByRole("button", { name: "Sign in with Keycloak" })).toBeVisible();
+});
+
+// Regression test: signing out of the app must also end Keycloak's own SSO
+// session (RP-initiated logout), not just the app's session cookie. If it
+// doesn't, the next "Sign in with Keycloak" click silently re-authenticates
+// whoever was previously signed in instead of showing a login form, and a
+// second user can never sign in without manually clearing cookies.
+test("signing out lets a different user sign in", async ({ page }) => {
+  await signInFromHome(page, "rob");
+  await expect(page.getByText(/Signed in as/)).toContainText("Rob");
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: "Sign in with Keycloak" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
+  // Must land on a real login form, not get silently re-authenticated via a
+  // still-alive Keycloak SSO session.
+  await page.getByLabel("Username or email").waitFor({ state: "visible", timeout: 5000 });
+
+  await fillAndSubmitLogin(page, "kathy", SEED_PASSWORD);
+  const invalidCredentials = await page
+    .getByText(/Invalid username or password/i)
+    .waitFor({ state: "visible", timeout: 3000 })
+    .then(() => true)
+    .catch(() => false);
+  if (invalidCredentials) {
+    await fillAndSubmitLogin(page, "kathy", NEW_PASSWORD);
+  }
+  await handlePasswordResetIfPresent(page, NEW_PASSWORD);
+  await page.waitForURL("http://localhost:3000/");
+
+  await expect(page.getByText(/Signed in as/)).toContainText("Kathy");
 });
