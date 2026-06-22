@@ -113,7 +113,65 @@ See the **Local development** table in the root `README.md` for the full list.
 - **`node_modules` looks weird** (symlinks, a `.pnpm/` folder). That's intentional —
   don't try to "fix" it.
 
-## 7. If you'd rather not learn pnpm right now
+## 7. Shell aliases — `pp*` mirrors your `np*` muscle memory
+
+If your `~/.zshrc` has npm shortcut aliases (`npb`, `npr`, `nps`, etc.), there's a
+`pp*` alias for each one, same letters, just `pp` instead of `np`. Use these in
+this repo instead of the `np*` ones — the underlying scripts here are pnpm, not
+npm.
+
+| npm alias | pnpm alias | Command |
+|---|---|---|
+| `npb` | `ppb` | `pnpm run build` |
+| `npc` | `ppc` | `pnpm run clean` |
+| `npd` | `ppd` | `pnpm run deploy` |
+| `npdp` | `ppdp` | `pnpm run deploy:prod` |
+| `npdb` | `ppdb` | `pnpm run docker:build` |
+| `npdn` | `ppdn` | `pnpm run docker:nuke` |
+| `npds` | `ppds` | `pnpm run docker:start` |
+| `npdst` | `ppdst` | `pnpm run docker:stop` |
+| `nppd` | `pppd` | `pnpm run pre-deploy` |
+| `npr` | `ppr` | `pnpm run` |
+| `nps` | `pps` | `pnpm start` |
+| `npst` | `ppst` | `pnpm stop` |
+| `npt` | `ppt` | `pnpm test` |
+| — | `ppi` | `pnpm install` (no npm alias existed for this one) |
+| — | `ppx` | `pnpm dlx` (pnpm's `npx`; no npm alias existed for this one) |
+
+These were added to `~/.zshrc` right after the existing npm alias block:
+
+```bash
+# pnpm (mirrors the npm aliases above — use these in pnpm-managed repos, e.g.
+# coordination-intelligence-platform, instead of the np* npm ones)
+alias ppb="pnpm run build"
+alias ppc="pnpm run clean"
+alias ppd="pnpm run deploy"
+alias ppdp="pnpm run deploy:prod"
+alias ppdb="pnpm run docker:build"
+alias ppdn="pnpm run docker:nuke"
+alias ppds="pnpm run docker:start"
+alias ppdst="pnpm run docker:stop"
+alias pppd="pnpm run pre-deploy"
+alias ppr="pnpm run"
+alias pps="pnpm start"
+alias ppst="pnpm stop"
+alias ppt="pnpm test"
+alias ppi="pnpm install"
+alias ppx="pnpm dlx"
+```
+
+The `np*` aliases are left in place (other repos may still use npm) — `pp*` is
+additive, not a replacement. After editing `~/.zshrc`, run `source ~/.zshrc` (or
+open a new terminal tab) to pick them up.
+
+> Heads-up: the root `package.json` here doesn't define `build`, `clean`,
+> `deploy`, `docker:*`, or `pre-deploy` scripts — those `pp*` aliases exist only
+> to mirror your npm habits 1:1; the ones that map to real scripts in *this*
+> repo are `pps` (`pnpm start`), `ppst` (`pnpm stop`), and `ppr dev:api` /
+> `ppr test:web` for the rest. See §5 above for the full list of scripts that
+> actually exist here.
+
+## 8. If you'd rather not learn pnpm right now
 
 Only `apps/web` (the Next.js frontend) uses pnpm. The Python side (`apps/api`,
 `ingestion`) uses **uv**, and Docker is just `docker compose`. So you can do most
