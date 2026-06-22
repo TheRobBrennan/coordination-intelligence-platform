@@ -1,26 +1,32 @@
 # Coordination Intelligence Platform — Runbook
 
 ## 0. Prereqs
-- Docker, Python 3.12+ (`uv` recommended), Node 20+ (`pnpm` — new to it? see [pnpm-for-npm-users.md](pnpm-for-npm-users.md)).
+- **Docker Desktop** — the only required install. Everything else runs in containers.
 - An LLM key: `ANTHROPIC_API_KEY` (default) or OpenAI/Azure if you flip `LLM_PROVIDER`.
+- (Optional, native path only) Python 3.12 + `uv`, Node 20 + `pnpm` — see
+  [pnpm-for-npm-users.md](pnpm-for-npm-users.md). Not needed for the `make` flow.
 
-## 1. Bring up infra
+## 1. Bring up the stack
 ```bash
 cp .env.example .env        # fill ANTHROPIC_API_KEY, set passwords
-docker compose -f infra/docker-compose.yml up -d
+make up                     # Neo4j + Keycloak + API (hot reload). Ctrl+C stops.
+# add the web UI once scaffolded:  make up-web
 ```
 - Neo4j browser: http://localhost:7474 (neo4j / $NEO4J_PASSWORD)
-- Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
+- API: http://localhost:8000  ·  Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
   - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst).
   - ⚠️ Passwords in `infra/keycloak/realm-export.json` are temporary placeholders
     (`changeme`) — change on first login and set the real client secret in `.env`.
 
 ## 2. Run the test suites (all should be green before any feature work)
 ```bash
-cd ingestion && uv sync --extra dev && uv run pytest      # extractor/loader
-cd ../apps/api && uv sync --extra dev && uv run pytest     # read API routes
-cd ../web && pnpm install && pnpm test                     # vitest (once scaffolded)
+make test                                # API routes, in the api container
 ```
+The ingestion extractor/loader tests run natively (they're fully offline — no DB,
+no API key, HTML fixtures): `cd ingestion && uv sync --extra dev && uv run pytest`.
+No `PYTHONPATH` needed — `pythonpath` is set in each `pyproject.toml`.
+(An `ingestion` test service can be added to compose later if a Docker-only test
+run is wanted there too.)
 
 ## 3. Ingest (offline batch — the slow/expensive part)
 ```bash
@@ -31,10 +37,8 @@ uv run python -m cip_ingest.run --seed seed/organizations.json   # (run.py = day
 Re-runs are idempotent (MERGE) — this doubles as the "refresh agent".
 
 ## 4. Serve the demo
-```bash
-cd apps/api && uv run uvicorn app.main:app --reload   # :8000
-cd apps/web && pnpm dev                                # :3000
-```
+`make up` already serves the API (`:8000`) and, with `make up-web`, the web UI
+(`:3000`) — both with hot reload. No separate serve step.
 
 ## 5. Demo flow for Kathy
 1. Search a topic (e.g. "supply chain resilience") → list of orgs across sectors.

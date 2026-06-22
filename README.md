@@ -21,44 +21,65 @@ apps/web        Next.js — search UI + graph viz
 apps/api        FastAPI — read API over the graph
 ingestion       Python — scrape → extract → load (offline)
 packages/shared topic taxonomy + shared types
-infra           docker-compose: neo4j, keycloak, postgres
+infra           docker-compose: neo4j, keycloak, postgres, api, web (+ Dockerfiles)
 docs            ADRs, data model, runbook
 ```
 
-## Quickstart
+## Get started — the only thing you install is Docker Desktop
+
+Everything else (Neo4j, Keycloak, Python, Node, pnpm) runs inside containers at
+versions pinned in the images — nothing to install on your machine, nothing to
+match.
 
 ```bash
-cp .env.example .env          # fill in ANTHROPIC_API_KEY etc.
-pnpm install                  # root tools (concurrently) + workspace
-cd ingestion && uv sync && cd ..      # ingestion deps (one-time)
-cd apps/api && uv sync && cd ../..    # api deps (one-time)
-pnpm start                    # ← brings up everything (see below)
+git clone <repo> && cd coordination-intelligence-platform
+cp .env.example .env          # add your ANTHROPIC_API_KEY
+make up                       # ← builds + starts the whole stack
 ```
 
-> **New to pnpm?** It's npm with a faster store and a few renamed commands
-> (`npx` → `pnpm dlx`, lockfile is `pnpm-lock.yaml`). Full crossover guide:
-> [`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md).
+That's it. `make up` brings up:
 
-## Local development — one command up, one command down
+| Service | URL | Notes |
+|---|---|---|
+| Neo4j (graph DB) | http://localhost:7474 | browser; bolt on :7687 |
+| Keycloak (auth) | http://localhost:8080 | realm `platform` auto-seeds users `rob` / `kathy` |
+| API (FastAPI) | http://localhost:8000 | hot reload — edit `apps/api`, it reloads in place |
 
-Docker holds only the **slow services** (Neo4j + Keycloak). The API and web app
-run on the **host with hot reload**, so you rarely need to restart Docker — edit
-code and it reloads in place.
+`Ctrl+C` stops it. The web UI (`apps/web`) starts too once it's scaffolded —
+`make up-web` (see [`apps/web/README.md`](apps/web/README.md)).
+
+### Everyday commands (only Docker required)
 
 | Command | What it does |
 |---|---|
-| `pnpm start` | Bring up Docker (Neo4j + Keycloak), then run the API (`uvicorn --reload`) and web (`next dev`) together with hot reload. `Ctrl+C` stops the apps; Docker keeps running. |
-| `pnpm stop` | Shut everything down — stops the API/web (ports 8000/3000) **and** the Docker services, in one command. |
-| `pnpm build` | Pull fresh Docker images and force-recreate the containers (clean image refresh). Data volumes are preserved. |
-| `pnpm clean` | Hard reset — remove containers, **data volumes**, and locally built images. Use when you want a clean Neo4j/Keycloak slate. |
-| `pnpm dev` | Just the apps (assumes Docker is already up via `pnpm infra:up`). |
-| `pnpm infra:up` / `infra:down` | Start / stop only the Docker services. |
+| `make up` | Build + start the stack (Neo4j + Keycloak + API), with hot reload. |
+| `make up-web` | Same, plus the Next.js web app (once `apps/web` exists). |
+| `make down` | Stop everything. |
+| `make build` | Rebuild images from scratch (no cache) and recreate containers. |
+| `make clean` | Hard reset — wipe data volumes + built images for a fresh slate. |
+| `make logs` / `make ps` | Tail logs / list running services. |
+| `make test` | Run the API test suite inside the container. |
 
-> Note: `pnpm dev:web` / `pnpm start` need `apps/web` scaffolded first
-> (`create-next-app` — see `apps/web/README.md`). Until then, run the API alone
-> with `pnpm dev:api`.
+> No `make`? It ships with macOS (Xcode command-line tools). Or run the raw
+> command behind any target, e.g. `docker compose -f infra/docker-compose.yml up`.
 
-See `docs/runbook.md` for the full demo flow.
+### Dev environment
+
+Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
+26.5.1)**. All images are multi-arch, so they run natively on Apple Silicon
+(arm64) and on x86. Pinned versions: **Neo4j 5**, **Keycloak 26**, **Postgres
+16**, **Python 3.12**, **Node 20**, **pnpm 9** — all declared in
+`infra/docker-compose.yml` and the per-app `Dockerfile.dev` files.
+
+### Prefer to run the apps natively? (optional)
+
+If you'd rather run the API/web directly on your machine for faster reloads, you
+can — you'll need Node 20 + pnpm and Python 3.12 + uv installed. The `pnpm`
+scripts (`pnpm start` / `stop` / `dev:api`) cover that path; see
+[`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md) if pnpm is new to you.
+The containerized `make` flow above is the recommended default.
+
+See `docs/runbook.md` for the full demo flow (ingestion, seeding, the demo).
 
 ## Constraints baked in
 

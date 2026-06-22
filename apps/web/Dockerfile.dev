@@ -1,0 +1,23 @@
+# Dev image for the Next.js UI. Pins Node 20 + pnpm 9 (via Corepack) so the host
+# needs neither. Source is bind-mounted at runtime; node_modules is an anonymous
+# volume so the empty host folder doesn't shadow installed deps.
+#
+# NOTE: this builds only AFTER apps/web is scaffolded (create-next-app produces
+# the package.json this expects). Until then the "web" compose profile is off by
+# default, so `docker compose up` ignores this service.
+FROM node:20-bookworm-slim
+
+ENV PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+# Install deps first for layer caching (lockfile may not exist on first run).
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install
+
+COPY . .
+
+EXPOSE 3000
+CMD ["pnpm", "dev"]
