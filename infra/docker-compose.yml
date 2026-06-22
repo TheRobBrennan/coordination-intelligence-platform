@@ -43,7 +43,10 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
     volumes:
-      - kc_postgres_data:/var/lib/postgresql/data
+      # postgres 18+ images store data in a pg_ctlcluster-style subdirectory and
+      # expect the volume mounted one level up at /var/lib/postgresql (not
+      # .../data) — see https://github.com/docker-library/postgres/pull/1259
+      - kc_postgres_data:/var/lib/postgresql
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.6
