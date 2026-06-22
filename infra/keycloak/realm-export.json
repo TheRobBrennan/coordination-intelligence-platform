@@ -36,7 +36,7 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "changeme", "temporary": true }
+        { "type": "password", "value": "demo", "temporary": true }
       ],
       "realmRoles": ["admin", "analyst"]
     },
@@ -48,7 +48,7 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "changeme", "temporary": true }
+        { "type": "password", "value": "demo", "temporary": true }
       ],
       "realmRoles": ["analyst"]
     }

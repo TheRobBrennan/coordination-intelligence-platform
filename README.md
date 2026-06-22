@@ -62,8 +62,8 @@ Everything below is local-dev defaults from `.env.example` / the seed realm —
 | API — topics | http://localhost:8000/topics | — | — |
 | Neo4j Browser | http://localhost:7474 | `neo4j` | `devpassword` |
 | Keycloak admin | http://localhost:8080/admin | `admin` | `admin` |
-| App user (admin role) | via the web app | `rob` | `changeme` (temporary) |
-| App user (analyst role) | via the web app | `kathy` | `changeme` (temporary) |
+| App user (admin role) | via the web app | `rob` | `demo` (temporary) |
+| App user (analyst role) | via the web app | `kathy` | `demo` (temporary) |
 
 > Neo4j Bolt connection string for tools: `bolt://localhost:7687` (`neo4j` / `devpassword`).
 > The `rob` / `kathy` passwords are flagged **temporary** in the realm — Keycloak

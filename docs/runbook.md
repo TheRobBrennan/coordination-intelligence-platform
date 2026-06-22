@@ -17,7 +17,7 @@ make up                     # Neo4j + Keycloak + API (hot reload). Ctrl+C stops.
 - API: http://localhost:8000  ·  Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
   - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst).
   - ⚠️ Passwords in `infra/keycloak/realm-export.json` are temporary placeholders
-    (`changeme`) — change on first login and set the real client secret in `.env`.
+    (`demo`) — change on first login and set the real client secret in `.env`.
 
 ## 2. Run the test suites (all should be green before any feature work)
 ```bash

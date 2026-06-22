@@ -3,9 +3,10 @@ import { test, expect } from "@playwright/test";
 const KEYCLOAK_BASE = process.env.KEYCLOAK_ISSUER?.replace(/\/realms\/.*/, "") ?? "http://localhost:8080";
 const ADMIN_USER = process.env.KC_ADMIN ?? "admin";
 const ADMIN_PASSWORD = process.env.KC_ADMIN_PASSWORD ?? "admin";
+const SEED_PASSWORD = "demo";
 
-// Reset rob's credential back to the seeded "changeme"/temporary=true state
-// via Keycloak's admin API, so this test is rerunnable without a full realm
+// Reset rob's credential back to the seeded "demo"/temporary=true state via
+// Keycloak's admin API, so this test is rerunnable without a full realm
 // reimport even after a real password-reset flow has changed it.
 async function resetRobPassword() {
   const tokenRes = await fetch(`${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`, {
@@ -28,7 +29,7 @@ async function resetRobPassword() {
   await fetch(`${KEYCLOAK_BASE}/admin/realms/platform/users/${rob.id}/reset-password`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "password", value: "changeme", temporary: true }),
+    body: JSON.stringify({ type: "password", value: SEED_PASSWORD, temporary: true }),
   });
 }
 
@@ -44,7 +45,7 @@ test("user can sign in via Keycloak and see their session", async ({ page }) => 
 
   await page.waitForURL(/\/realms\/platform\/protocol\/openid-connect\/auth/);
   await page.getByLabel("Username or email").fill("rob");
-  await page.getByLabel("Password", { exact: true }).fill("changeme");
+  await page.getByLabel("Password", { exact: true }).fill(SEED_PASSWORD);
   await page.getByRole("button", { name: "Sign In" }).click();
 
   // First-login forced password reset (seed credential is "temporary").
