@@ -1,0 +1,7 @@
+# Dockerfile.dev builds apps/web in isolation (context: apps/web, not the repo
+# root), so it can't see the root pnpm-workspace.yaml's allowBuilds approval.
+# Duplicated here for the same two deps that need it (sharp: next/image's
+# optimizer; unrs-resolver: eslint's resolver) — both standard, trusted builds.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

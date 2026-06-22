@@ -16,7 +16,9 @@ RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 WORKDIR /app
 
 # Install deps first for layer caching (lockfile may not exist on first run).
-COPY package.json pnpm-lock.yaml* ./
+# pnpm-workspace.yaml carries the allowBuilds approval for sharp/unrs-resolver
+# install scripts — without it pnpm blocks on [ERR_PNPM_IGNORED_BUILDS].
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 RUN pnpm install
 
 COPY . .
