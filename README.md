@@ -68,14 +68,16 @@ That's it. `make up` brings up:
 Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
 26.5.1)**. All images are multi-arch, so they run natively on Apple Silicon
 (arm64) and on x86. Pinned versions: **Neo4j 5**, **Keycloak 26**, **Postgres
-16**, **Python 3.12**, **Node 20**, **pnpm 9** — all declared in
-`infra/docker-compose.yml` and the per-app `Dockerfile.dev` files.
+16**, **Python 3.12**, **Node 24.17.0 LTS** (Krypton), **pnpm 10.11.1** — all
+declared in `infra/docker-compose.yml`, the per-app `Dockerfile.dev` files,
+`.nvmrc`, and `package.json` (`engines` + `packageManager`).
 
 ### Prefer to run the apps natively? (optional)
 
 If you'd rather run the API/web directly on your machine for faster reloads, you
-can — you'll need Node 20 + pnpm and Python 3.12 + uv installed. The `pnpm`
-scripts (`pnpm start` / `stop` / `dev:api`) cover that path; see
+can — you'll need Node 24 LTS + pnpm 10 and Python 3.12 + uv installed. With
+`nvm`, just `nvm use` in the repo root (it reads `.nvmrc` → Node 24.17.0). The
+`pnpm` scripts (`pnpm start` / `stop` / `dev:api`) cover that path; see
 [`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md) if pnpm is new to you.
 The containerized `make` flow above is the recommended default.
 
