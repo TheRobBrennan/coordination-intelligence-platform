@@ -67,18 +67,24 @@ That's it. `make up` brings up:
 
 Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
 26.5.1)**. All images are multi-arch, so they run natively on Apple Silicon
-(arm64) and on x86. Pinned versions: **Neo4j 5**, **Keycloak 26**, **Postgres
-16**, **Python 3.12**, **Node 24.17.0 LTS** (Krypton), **pnpm 10.11.1** — all
-declared in `infra/docker-compose.yml`, the per-app `Dockerfile.dev` files,
-`.nvmrc`, and `package.json` (`engines` + `packageManager`).
+(arm64) and on x86. **Latest stable across the board**, pinned: **Neo4j 2026.05**,
+**Keycloak 26.6**, **Postgres 18**, **Python 3.14**, **Node 24.17.0 LTS**
+(Krypton), **pnpm 11.8.0** — declared in `infra/docker-compose.yml`, the per-app
+`Dockerfile.dev` files, `.nvmrc`, and `package.json` (`engines` + `packageManager`).
+
+> Upgrading an existing checkout? The Postgres (16→18) and Neo4j (5→2026.05) major
+> bumps can't read old data dirs. There's no real data yet, so run `make clean`
+> once to drop the stale volumes, then `make up`.
 
 ### Prefer to run the apps natively? (optional)
 
 If you'd rather run the API/web directly on your machine for faster reloads, you
-can — you'll need Node 24 LTS + pnpm 10 and Python 3.12 + uv installed. With
-`nvm`, just `nvm use` in the repo root (it reads `.nvmrc` → Node 24.17.0). The
-`pnpm` scripts (`pnpm start` / `stop` / `dev:api`) cover that path; see
-[`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md) if pnpm is new to you.
+can — you'll need Node 24 LTS + pnpm 11 and Python 3.14 + uv installed. With
+`nvm`, just `nvm use` in the repo root (it reads `.nvmrc` → Node 24.17.0); pnpm
+is pinned via `packageManager`, so `corepack enable` makes the repo use 11.8.0
+automatically. The `pnpm` scripts (`pnpm start` / `stop` / `dev:api`) cover that
+path; see [`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md) if pnpm is
+new to you.
 The containerized `make` flow above is the recommended default.
 
 See `docs/runbook.md` for the full demo flow (ingestion, seeding, the demo).

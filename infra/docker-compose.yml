@@ -1,7 +1,8 @@
 # Full local dev stack for the Coordination Intelligence Platform PoC.
 # Everything runs in containers — the only thing you install on your machine is
-# Docker Desktop. Toolchain versions (Neo4j, Keycloak, Python, Node, pnpm) are
-# all pinned in these images / the per-app Dockerfiles, so the host stays clean.
+# Docker Desktop. Latest stable versions, pinned: Neo4j 2026.05, Keycloak 26.6,
+# Postgres 18, Python 3.14, Node 24.17.0 LTS, pnpm 11.8.0 — all in these images
+# and the per-app Dockerfiles, so the host stays clean.
 # All images are multi-arch and run natively on Apple Silicon (arm64) and x86.
 #
 #   neo4j     — graph DB (browser at http://localhost:7474)
@@ -12,7 +13,7 @@
 #               enable once apps/web is scaffolded:  docker compose --profile web up
 services:
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:2026.05-community
     container_name: cip-neo4j
     ports:
       - "7474:7474"   # browser
@@ -29,7 +30,7 @@ services:
       retries: 10
 
   kc-postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: cip-kc-postgres
     environment:
       POSTGRES_DB: keycloak
@@ -39,7 +40,7 @@ services:
       - kc_postgres_data:/var/lib/postgresql/data
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.6
     container_name: cip-keycloak
     command: start-dev --import-realm
     depends_on:

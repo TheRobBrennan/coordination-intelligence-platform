@@ -1,8 +1,8 @@
-# Dev image for the FastAPI read API. Pins Python 3.12 + uv so the host needs
+# Dev image for the FastAPI read API. Pins Python 3.14 + uv so the host needs
 # neither. Source is bind-mounted at runtime (see infra/docker-compose.yml) for
 # hot reload; the virtualenv lives at /opt/venv, OUTSIDE the mount, so the host
 # directory doesn't shadow installed dependencies.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # uv resolves/installs deps; keep the project venv off the bind-mounted /app.
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
