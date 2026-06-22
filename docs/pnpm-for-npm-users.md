@@ -86,11 +86,18 @@ The root scripts wrap everything — you rarely call `pnpm --filter` directly:
 
 ```bash
 pnpm install     # install JS deps for the whole workspace
-pnpm start       # docker infra up + API & web with hot reload
-pnpm stop        # shut it all down
-pnpm dev:api     # just the FastAPI backend (no web needed)
+pnpm start       # = make up   (Neo4j + Keycloak + API, hot reload)
+pnpm stop        # = make down
+pnpm build       # = make build
+pnpm clean       # = make clean (wipes volumes)
+pnpm dev:api     # native-only: just the FastAPI backend (no Docker, no web)
 pnpm test:web    # vitest in apps/web
 ```
+
+`start`/`stop`/`build`/`clean` are thin wrappers around the matching `make`
+target — the Makefile (`Makefile` at repo root) is the single source of truth
+for the actual `docker compose` invocation, so there's nowhere for the two to
+drift out of sync. Use whichever you have muscle memory for; they're identical.
 
 See the **Local development** table in the root `README.md` for the full list.
 
@@ -164,12 +171,13 @@ The `np*` aliases are left in place (other repos may still use npm) — `pp*` is
 additive, not a replacement. After editing `~/.zshrc`, run `source ~/.zshrc` (or
 open a new terminal tab) to pick them up.
 
-> Heads-up: the root `package.json` here doesn't define `build`, `clean`,
-> `deploy`, `docker:*`, or `pre-deploy` scripts — those `pp*` aliases exist only
-> to mirror your npm habits 1:1; the ones that map to real scripts in *this*
-> repo are `pps` (`pnpm start`), `ppst` (`pnpm stop`), and `ppr dev:api` /
-> `ppr test:web` for the rest. See §5 above for the full list of scripts that
-> actually exist here.
+> Heads-up: the root `package.json` here doesn't define `deploy`, `docker:*`,
+> or `pre-deploy` scripts — those `pp*` aliases exist only to mirror your npm
+> habits 1:1. The ones that map to real scripts in *this* repo are `ppb`
+> (`pnpm build` → `make build`), `ppc` (`pnpm clean` → `make clean`), `pps`
+> (`pnpm start` → `make up`), `ppst` (`pnpm stop` → `make down`), and
+> `ppr dev:api` / `ppr test:web` for the rest. See §5 above for the full list
+> of scripts that actually exist here.
 
 ## 8. If you'd rather not learn pnpm right now
 

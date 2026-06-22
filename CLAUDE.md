@@ -58,12 +58,13 @@ make check         # report active LLM extraction mode (key vs subscription vs m
 make test          # API test suite, in-container
 make test-ingest   # ingestion test suite, in-container
 
-# Native (faster reload, needs local Node 24 + pnpm 11 + Python 3.14 + uv):
+# pnpm wrappers — pnpm start/stop/build/clean just shell out to the make
+# targets above (one source of truth for the docker compose invocation):
 pnpm install       # whole JS workspace
-pnpm start         # infra up + API & web with hot reload
-pnpm dev:api       # just FastAPI (uv run uvicorn ...)
+pnpm start         # = make up
+pnpm stop          # = make down
+pnpm dev:api       # native-only fast iteration: just FastAPI (uv run uvicorn ...)
 pnpm test:web      # vitest in apps/web
-pnpm stop
 
 cd apps/api && uv run pytest          # api tests, native
 cd ingestion && uv sync --extra dev && uv run pytest   # ingestion tests, native (offline, no DB/key)
