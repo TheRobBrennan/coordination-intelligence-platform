@@ -25,11 +25,16 @@ ingestion/.cache/
 ingestion/output/
 *.local
 
-# no-API-key run artifacts (timestamped prompt/response/log files, may be large)
-cli-runs/
-**/cli-runs/
-manual-runs/
-**/manual-runs/
+# no-API-key run artifacts: keep the folders visible in the repo (.gitkeep),
+# but ignore the timestamped prompt/response/log files inside them.
+cli-runs/*
+!cli-runs/.gitkeep
+**/cli-runs/*
+!**/cli-runs/.gitkeep
+manual-runs/*
+!manual-runs/.gitkeep
+**/manual-runs/*
+!**/manual-runs/.gitkeep
 diagnostics/
 **/diagnostics/
 

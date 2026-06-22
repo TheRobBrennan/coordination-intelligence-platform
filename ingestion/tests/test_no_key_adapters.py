@@ -10,7 +10,7 @@ from cip_ingest.adapters.mock_adapter import MockAdapter
 
 async def test_mock_adapter_extracts_topics() -> None:
     text = "We work on cybersecurity threat intelligence and supply chain resilience for the energy grid."
-    raw = await MockAdapter().extract_topics(org_name="Acme", page_text=text)
+    raw = await MockAdapter().extract_topics(org_name="Example Organization", page_text=text)
     data = json.loads(raw)
     topics = {d["topic"] for d in data}
     assert "Cybersecurity / threat intelligence sharing" in topics
@@ -21,7 +21,7 @@ async def test_mock_adapter_extracts_topics() -> None:
 
 
 async def test_mock_adapter_no_match_is_empty_list() -> None:
-    raw = await MockAdapter().extract_topics(org_name="Acme", page_text="We sell artisanal cheese.")
+    raw = await MockAdapter().extract_topics(org_name="Example Organization", page_text="We sell artisanal cheese.")
     assert json.loads(raw) == []
 
 

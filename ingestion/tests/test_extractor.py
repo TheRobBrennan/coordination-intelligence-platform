@@ -39,17 +39,17 @@ async def test_extract_parses_and_validates() -> None:
         ]
     )
     mentions = await extract_topics(
-        adapter, org_name="Acme ISAC", source_url="https://acme.example", html=FIXTURE.read_text()
+        adapter, org_name="Example Organization", source_url="https://example.org", html=FIXTURE.read_text()
     )
     assert [m.topic for m in mentions] == ["AI", "Supply chain resilience"]
     assert all(0.0 <= m.confidence <= 1.0 for m in mentions)
-    assert all(m.source_url == "https://acme.example" for m in mentions)
+    assert all(m.source_url == "https://example.org" for m in mentions)
 
 
 async def test_extract_accepts_topics_envelope() -> None:
     adapter = FakeAdapter({"topics": [{"topic": "Drones", "confidence": 0.5, "source_evidence": "x"}]})
     mentions = await extract_topics(
-        adapter, org_name="Acme", source_url="https://a.example", html="<p>hi</p>"
+        adapter, org_name="Example Organization", source_url="https://example.org", html="<p>hi</p>"
     )
     assert mentions[0].topic == "Drones"
 

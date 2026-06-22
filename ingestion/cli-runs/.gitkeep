@@ -1,0 +1,2 @@
+# Claude CLI extraction logs land here as <org>-YYYYMMDD-HHMM-<TZ>.md (local time).
+# The folder is tracked so it's visible; the timestamped files are gitignored.
