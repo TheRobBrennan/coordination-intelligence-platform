@@ -62,21 +62,19 @@ Everything below is local-dev defaults from `.env.example` / the seed realm —
 | API — topics | http://localhost:8000/topics | — | — |
 | Neo4j Browser | http://localhost:7474 | `neo4j` | `devpassword` |
 | Keycloak admin | http://localhost:8080/admin | `admin` | `admin` |
-| App user (admin role) | via the web app | `rob` | `demo` (temporary) |
-| App user (analyst role) | via the web app | `kathy` | `demo` (temporary) |
+| App user (admin role) | via the web app | `rob` | `demo` |
+| App user (analyst role) | via the web app | `kathy` | `demo` |
 
 > Neo4j Bolt connection string for tools: `bolt://localhost:7687` (`neo4j` / `devpassword`).
-> The `rob` / `kathy` passwords are flagged **temporary** in the realm — Keycloak
-> forces a reset on first login.
 
 ### Change the passwords
 
 These defaults are fine on `localhost`; rotate them before any shared/remote use.
 
-- **App users (`rob`, `kathy`)** — sign in once at the web app (or Keycloak
-  Account console: http://localhost:8080/realms/platform/account) → Keycloak
-  prompts for a new password because the seeds are temporary. To reset for
-  someone else: Keycloak admin → realm `platform` → Users → *user* → Credentials.
+- **App users (`rob`, `kathy`)** — sign in at the web app and change it from the
+  Keycloak Account console (http://localhost:8080/realms/platform/account), or
+  reset it for someone else: Keycloak admin → realm `platform` → Users →
+  *user* → Credentials.
 - **Keycloak admin (`admin`/`admin`)** — set `KC_ADMIN` / `KC_ADMIN_PASSWORD` in
   `.env`, then `make build` (recreates the container). Or change it in the admin
   console under the master realm.

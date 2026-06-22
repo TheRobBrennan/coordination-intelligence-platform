@@ -5,9 +5,9 @@ const ADMIN_USER = process.env.KC_ADMIN ?? "admin";
 const ADMIN_PASSWORD = process.env.KC_ADMIN_PASSWORD ?? "admin";
 const SEED_PASSWORD = "demo";
 
-// Reset rob's credential back to the seeded "demo"/temporary=true state via
+// Reset rob's credential back to the seeded "demo"/temporary=false state via
 // Keycloak's admin API, so this test is rerunnable without a full realm
-// reimport even after a real password-reset flow has changed it.
+// reimport even if a manual password change happened in between.
 async function resetRobPassword() {
   const tokenRes = await fetch(`${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`, {
     method: "POST",
@@ -29,16 +29,17 @@ async function resetRobPassword() {
   await fetch(`${KEYCLOAK_BASE}/admin/realms/platform/users/${rob.id}/reset-password`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "password", value: SEED_PASSWORD, temporary: true }),
+    body: JSON.stringify({ type: "password", value: SEED_PASSWORD, temporary: false }),
   });
 }
 
 test.beforeAll(resetRobPassword);
 
 // Verifies the full Keycloak sign-in flow against the real realm seeded by
-// infra/keycloak/realm-export.json. rob's seed credential is flagged
-// "temporary", so Keycloak forces a password reset on this first login —
-// the test drives that step too rather than assuming a one-shot login form.
+// infra/keycloak/realm-export.json. The seed credential is not temporary, so
+// this should be a one-shot login with no forced password-reset step — the
+// defensive check below just guards against that ever silently regressing
+// (e.g. someone flips the seed back to temporary=true).
 test("user can sign in via Keycloak and see their session", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
@@ -48,12 +49,12 @@ test("user can sign in via Keycloak and see their session", async ({ page }) => 
   await page.getByLabel("Password", { exact: true }).fill(SEED_PASSWORD);
   await page.getByRole("button", { name: "Sign In" }).click();
 
-  // First-login forced password reset (seed credential is "temporary").
-  // isVisible() doesn't wait/retry — it's an instant check — so use waitFor()
-  // to actually give the page a chance to navigate before deciding.
+  // Defensive only: isVisible() doesn't wait/retry, so use waitFor() to give
+  // the page a chance to navigate before deciding whether a reset form (it
+  // shouldn't) appeared.
   const newPassword = page.getByLabel("New Password", { exact: true });
   const hasPasswordReset = await newPassword
-    .waitFor({ state: "visible", timeout: 5000 })
+    .waitFor({ state: "visible", timeout: 2000 })
     .then(() => true)
     .catch(() => false);
   if (hasPasswordReset) {

@@ -15,9 +15,10 @@ make up                     # Neo4j + Keycloak + API (hot reload). Ctrl+C stops.
 ```
 - Neo4j browser: http://localhost:7474 (neo4j / $NEO4J_PASSWORD)
 - API: http://localhost:8000  ·  Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
-  - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst).
-  - ⚠️ Passwords in `infra/keycloak/realm-export.json` are temporary placeholders
-    (`demo`) — change on first login and set the real client secret in `.env`.
+  - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst),
+    both seeded with password `demo` — no forced reset, so the demo can sign straight in.
+  - ⚠️ These are local-dev placeholders — rotate them and set the real client
+    secret in `.env` before anything leaves your machine.
 
 ## 2. Run the test suites (all should be green before any feature work)
 ```bash
