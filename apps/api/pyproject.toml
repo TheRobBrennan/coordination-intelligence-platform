@@ -1,0 +1,20 @@
+[project]
+name = "cxc-api"
+version = "0.1.0"
+description = "CXC PoC read API over the Neo4j coordination graph"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "neo4j>=5.23",
+    "pydantic-settings>=2.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "httpx>=0.27", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

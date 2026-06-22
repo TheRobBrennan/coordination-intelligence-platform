@@ -1,0 +1,13 @@
+{
+  "name": "cxc-poc",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CXC Coordination Intelligence Platform — PoC monorepo",
+  "scripts": {
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "dev:web": "pnpm --filter web dev",
+    "test:web": "pnpm --filter web test"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "note": "Candidate seed topics (PRD §6.1 wants 8-12). These seed clustering only; the LLM extracts what orgs actually say and topics emerge from the data (PRD §7.1 — no rigid taxonomy).",
+    "sectors": ["Communications", "Energy", "Supply Chain", "Cybersecurity", "Coordination Layer"]
+  },
+  "candidate_topics": [
+    "AI in critical infrastructure",
+    "Supply chain resilience",
+    "Cybersecurity / threat intelligence sharing",
+    "Emergency response & continuity",
+    "Drones / counter-UAS security",
+    "Chemical sector safety & security",
+    "Telecommunications resilience",
+    "Energy grid security",
+    "Biosecurity",
+    "Physical security & convergence",
+    "Information sharing (ISAC/SCC coordination)",
+    "Workforce & expertise"
+  ]
+}

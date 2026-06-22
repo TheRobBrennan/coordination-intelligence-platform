@@ -1,0 +1,31 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+.pnpm-store/
+
+# data / scrape artifacts
+ingestion/.cache/
+ingestion/output/
+*.local
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/

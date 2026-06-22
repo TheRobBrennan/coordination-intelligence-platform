@@ -1,0 +1,57 @@
+# Local dev stack for the CXC PoC.
+#   neo4j     — graph DB (browser at http://localhost:7474)
+#   keycloak  — auth / roles / accounts (admin console at http://localhost:8080)
+#   kc-postgres — keycloak's backing store
+#
+# The read API and web app run on the host during dev (hot reload); add them
+# here when you want a fully-containerized demo.
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: cxc-neo4j
+    ports:
+      - "7474:7474"   # browser
+      - "7687:7687"   # bolt
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-devpassword}
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kc-postgres:
+    image: postgres:16-alpine
+    container_name: cxc-kc-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    volumes:
+      - kc_postgres_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: cxc-keycloak
+    command: start-dev --import-realm
+    depends_on:
+      - kc-postgres
+    ports:
+      - "8080:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://kc-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    volumes:
+      # Realm + seed users (Rob, Kathy, …) imported on startup. See infra/keycloak.
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+volumes:
+  neo4j_data:
+  kc_postgres_data:

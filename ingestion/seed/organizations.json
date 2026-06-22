@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "source": "CXC Inaugural Org List (revised PRD doc), 2026-06-19",
+    "note": "Seed list for the PoC ingestion run. needs_validation orgs are kept but flagged; the scraper should not hard-fail on them.",
+    "count": 26
+  },
+  "organizations": [
+    { "name": "Lumen Technologies", "url": "https://www.lumen.com", "sector": "Communications", "type": "operator" },
+    { "name": "Verizon", "url": "https://www.verizon.com", "sector": "Communications", "type": "operator" },
+    { "name": "MetTel", "url": "https://www.mettel.net", "sector": "Communications", "type": "operator" },
+    { "name": "NextEra Energy", "url": "https://www.nexteraenergy.com", "sector": "Energy", "type": "operator" },
+    { "name": "CargoCheck", "url": "https://www.cargocheck.com", "sector": "Supply Chain", "type": "vendor" },
+    { "name": "Brenntag", "url": "https://www.brenntag.com", "sector": "Supply Chain", "type": "operator" },
+    { "name": "Univar Solutions", "url": "https://www.univarsolutions.com", "sector": "Supply Chain", "type": "operator" },
+    { "name": "American Fuel & Petrochemical Manufacturers (AFPM)", "url": "https://www.afpm.org", "sector": "Supply Chain", "type": "association" },
+    { "name": "Alliance for Chemical Distribution (ACD)", "url": "https://www.acd-chem.com", "sector": "Supply Chain", "type": "association" },
+    { "name": "The Chlorine Institute", "url": "https://www.chlorineinstitute.org", "sector": "Supply Chain", "type": "association" },
+    { "name": "Zscaler", "url": "https://www.zscaler.com", "sector": "Cybersecurity", "type": "vendor" },
+    { "name": "CyberGeist Security", "url": null, "sector": "Cybersecurity", "type": "vendor", "needs_validation": true },
+    { "name": "Pinkerton", "url": "https://www.pinkerton.com", "sector": "Cybersecurity", "type": "vendor" },
+    { "name": "SAIC", "url": "https://www.saic.com", "sector": "Cybersecurity", "type": "integrator" },
+    { "name": "Blueprint Biosecurity", "url": "https://www.blueprintbiosecurity.org", "sector": "Cybersecurity", "type": "research" },
+    { "name": "Deloitte", "url": "https://www.deloitte.com", "sector": "Risk / Consulting", "type": "consultancy" },
+    { "name": "Exiger", "url": "https://www.exiger.com", "sector": "Risk / Consulting", "type": "vendor" },
+    { "name": "ABS Consulting", "url": "https://www.abs-group.com", "sector": "Risk / Consulting", "type": "consultancy" },
+    { "name": "Risk Management Analysis", "url": null, "sector": "Risk / Consulting", "type": "consultancy", "needs_validation": true },
+    { "name": "ECS", "url": "https://www.ecstech.com", "sector": "Technology / Integrators", "type": "integrator", "needs_validation": true, "validation_note": "confirm: could be ECS Federal" },
+    { "name": "Security Industry Association (SIA)", "url": "https://www.securityindustry.org", "sector": "Industry Association", "type": "association" },
+    { "name": "American Public Works Association (APWA)", "url": "https://www.apwa.org", "sector": "Industry Association", "type": "association" },
+    { "name": "American Weather Enterprise Association", "url": "https://www.weatherassociation.org", "sector": "Industry Association", "type": "association" },
+    { "name": "Health-ISAC", "url": "https://health-isac.org", "sector": "Coordination Layer", "type": "isac" },
+    { "name": "InfraGard Houston Members Alliance", "url": "https://www.infragardhouston.org", "sector": "Public-Private", "type": "network" },
+    { "name": "Homeland Security Today", "url": "https://www.hstoday.us", "sector": "Media", "type": "media" },
+    { "name": "Regent Craft", "url": "https://www.regentcraft.com", "sector": "Transportation", "type": "vendor" },
+    { "name": "Metropolitan Museum of Art", "url": "https://www.metmuseum.org", "sector": "Commercial Facilities", "type": "operator" },
+    { "name": "EMDIA Star Gaming", "url": null, "sector": "Commercial Facilities", "type": "operator", "needs_validation": true, "validation_note": "domain likely mis-typed" }
+  ]
+}
