@@ -11,9 +11,11 @@ Because it relies on the host's `claude` login (subscription credentials in the
 macOS keychain / ~/.claude), this runs **natively on your machine** — not inside
 the Docker ingest container, which has neither the binary nor your credentials.
 
-Every call writes a timestamped reference doc to CLI_LOG_DIR
-(default ./cli-runs) named `<org>-YYYYMMDD-HHMM.md`, capturing the exact command,
-prompt, and raw response — so you can see what happened behind the scenes.
+Every call writes a timestamped reference doc to CLI_LOG_DIR (default ./cli-runs)
+named `<org>-YYYYMMDD-HHMM-<TZ>.md` — the time is **local**, and `<TZ>` is the
+local timezone abbreviation (e.g. `PDT` in summer, `PST` in winter), so the
+filename is unambiguous. Captures the exact command, prompt, and raw response —
+so you can see what happened behind the scenes.
 """
 
 from __future__ import annotations
@@ -88,14 +90,14 @@ class ClaudeCliAdapter:
         return _strip_fences(s)
 
     def _log(self, org_name, cmd, user_prompt, stdout, stderr, result) -> Path:
-        now = datetime.now()
-        path = self._log_dir / f"{_slug(org_name)}-{now:%Y%m%d-%H%M}.md"
+        now = datetime.now().astimezone()  # local time, with tz abbrev for %Z
+        path = self._log_dir / f"{_slug(org_name)}-{now:%Y%m%d-%H%M-%Z}.md"
         # Redact the prompt arg in the logged command (it's shown in full below).
         shown_cmd = " ".join("<prompt>" if a is user_prompt else a for a in cmd)
         path.write_text(
             f"""# Claude CLI extraction — {org_name}
 
-_Run {now.strftime("%A, %B %d, %Y %-I:%M %p")} (local time) · model `{self._model}` · via Claude subscription_
+_Run {now.strftime("%A, %B %d, %Y %-I:%M %p %Z")} (local time) · model `{self._model}` · via Claude subscription_
 
 ## Command
 ```

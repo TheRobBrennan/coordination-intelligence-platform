@@ -47,8 +47,9 @@ def _slug(name: str) -> str:
 class ManualAdapter:
     def __init__(self) -> None:
         base = Path(os.getenv("MANUAL_DIR", "manual-runs"))
-        # Reuse a run folder across passes via MANUAL_RUN; else stamp one now.
-        stamp = os.getenv("MANUAL_RUN") or datetime.now().strftime("%Y%m%d-%H%M")
+        # Reuse a run folder across passes via MANUAL_RUN; else stamp one now
+        # (local time + tz abbrev, e.g. 20260622-1438-PDT).
+        stamp = os.getenv("MANUAL_RUN") or datetime.now().astimezone().strftime("%Y%m%d-%H%M-%Z")
         self.run_dir = base / stamp
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -66,7 +67,7 @@ class ManualAdapter:
         raise ManualResponsePending(org_name, prompt_path, response_path)
 
     def _render(self, org_name: str, page_text: str, response_path: Path) -> str:
-        now = datetime.now().strftime("%A, %B %d, %Y %-I:%M %p")
+        now = datetime.now().astimezone().strftime("%A, %B %d, %Y %-I:%M %p %Z")
         return f"""# Manual extraction — {org_name}
 
 _Generated {now} (local time). Paste everything in the **Prompt** block below into

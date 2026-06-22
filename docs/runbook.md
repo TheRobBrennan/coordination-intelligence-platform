@@ -43,7 +43,7 @@ README): `LLM_PROVIDER=claude_cli` uses the Claude Code CLI on your subscription
 deterministic offline extraction; `LLM_PROVIDER=manual` writes prompts to paste
 into Claude Desktop. With the default `anthropic` and no key set, the pipeline
 auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
-`cli-runs/<org>-YYYYMMDD-HHMM.md`.
+`cli-runs/<org>-YYYYMMDD-HHMM-<TZ>.md` (local time; `<TZ>` = e.g. `PDT`/`PST`).
 
 ## 4. Serve the demo
 `make up` already serves the API (`:8000`) and, with `make up-web`, the web UI

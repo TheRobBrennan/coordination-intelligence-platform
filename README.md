@@ -102,8 +102,10 @@ Extraction (scraped text → topics) goes through a swappable adapter chosen by
 **No key set?** If `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` is empty, the
 pipeline automatically falls back to the **Claude Code CLI** (`claude`) using your
 subscription — provided `claude` is installed and logged in. Every CLI call writes
-a timestamped reference doc to `cli-runs/<org>-YYYYMMDD-HHMM.md` (command, prompt,
-raw output, parsed result) so you can see exactly what happened.
+a timestamped reference doc to `cli-runs/<org>-YYYYMMDD-HHMM-<TZ>.md` (command,
+prompt, raw output, parsed result) so you can see exactly what happened. The
+timestamp is **local time** and `<TZ>` is your local zone (e.g. `PDT`/`PST`), so
+the filename is unambiguous — e.g. `cli-runs/acme-isac-20260622-1443-PDT.md`.
 
 ```bash
 make check     # reports the active mode and whether it's usable
