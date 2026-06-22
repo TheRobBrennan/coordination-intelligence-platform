@@ -4,7 +4,11 @@
 #
 # Run `make` with no target to see this list.
 
-COMPOSE := docker compose -f infra/docker-compose.yml
+# --env-file is required: with -f pointing into infra/, compose would otherwise
+# treat infra/ as the project directory and look for infra/.env instead of the
+# repo-root .env, silently ignoring every override there (NEO4J_PASSWORD,
+# KEYCLOAK_CLIENT_SECRET, AUTH_SECRET, ...) in favor of in-file fallback defaults.
+COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 
 .DEFAULT_GOAL := help
 .PHONY: help up up-web down build clean logs ps check test test-ingest

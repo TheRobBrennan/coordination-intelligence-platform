@@ -116,6 +116,16 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
       WATCHPACK_POLLING: "true"    # reliable Next.js hot reload over macOS bind mounts
+      # Browser-facing issuer (login redirect + ID-token validation) stays on
+      # localhost; KEYCLOAK_INTERNAL_ISSUER is what this container itself uses
+      # for server-side token/userinfo/jwks calls, since "localhost" inside
+      # the container doesn't resolve back to the host's Keycloak — see
+      # apps/web/src/auth.ts.
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/platform
+      KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/platform
+      KEYCLOAK_CLIENT_ID: platform-web
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
     volumes:
       - ../apps/web:/app
       - /app/node_modules          # anonymous volume — don't let host shadow deps
