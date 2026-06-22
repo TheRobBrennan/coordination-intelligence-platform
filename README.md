@@ -72,10 +72,6 @@ Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
 (Krypton), **pnpm 11.8.0** — declared in `infra/docker-compose.yml`, the per-app
 `Dockerfile.dev` files, `.nvmrc`, and `package.json` (`engines` + `packageManager`).
 
-> Upgrading an existing checkout? The Postgres (16→18) and Neo4j (5→2026.05) major
-> bumps can't read old data dirs. There's no real data yet, so run `make clean`
-> once to drop the stale volumes, then `make up`.
-
 ### Prefer to run the apps natively? (optional)
 
 If you'd rather run the API/web directly on your machine for faster reloads, you
