@@ -37,6 +37,14 @@ uv run python -m cip_ingest.run --seed seed/organizations.json   # (run.py = day
 ```
 Re-runs are idempotent (MERGE) — this doubles as the "refresh agent".
 
+**No API key?** Pick a no-key extraction mode in `.env` (see the table in the
+README): `LLM_PROVIDER=claude_cli` uses the Claude Code CLI on your subscription
+(run natively as above — it needs your `claude` login); `LLM_PROVIDER=mock` runs a
+deterministic offline extraction; `LLM_PROVIDER=manual` writes prompts to paste
+into Claude Desktop. With the default `anthropic` and no key set, the pipeline
+auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
+`cli-runs/<org>-YYYYMMDD-HHMM.md`.
+
 ## 4. Serve the demo
 `make up` already serves the API (`:8000`) and, with `make up-web`, the web UI
 (`:3000`) — both with hot reload. No separate serve step.

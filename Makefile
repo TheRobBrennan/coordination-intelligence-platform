@@ -35,7 +35,7 @@ logs:  ## Tail logs from all running services
 ps:  ## Show running services
 	$(COMPOSE) ps
 
-check:  ## Verify the LLM API key is set & valid (writes a help file if not)
+check:  ## Report the active LLM mode and whether it's usable (key / subscription)
 	$(COMPOSE) --profile ingest run --rm --no-deps ingest \
 	  uv run python -m cip_ingest.preflight --validate
 

@@ -25,7 +25,11 @@ ingestion/.cache/
 ingestion/output/
 *.local
 
-# diagnostics (timestamped help files written by the preflight check)
+# no-API-key run artifacts (timestamped prompt/response/log files, may be large)
+cli-runs/
+**/cli-runs/
+manual-runs/
+**/manual-runs/
 diagnostics/
 **/diagnostics/
 

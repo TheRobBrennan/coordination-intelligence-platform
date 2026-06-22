@@ -87,12 +87,32 @@ These defaults are fine on `localhost`; rotate them before any shared/remote use
 - **Realm client secret** — replace the `REPLACE_ME_IN_ENV` placeholder in
   `infra/keycloak/realm-export.json` and set `KEYCLOAK_CLIENT_SECRET` in `.env`.
 
-### Check your LLM key before the first ingest
+### LLM extraction — and running without an API key
+
+Extraction (scraped text → topics) goes through a swappable adapter chosen by
+`LLM_PROVIDER` in `.env`. You don't need an Anthropic API key to develop:
+
+| `LLM_PROVIDER` | What it uses | Key? | Where it runs |
+|---|---|---|---|
+| `anthropic` | Anthropic API (default) | yes (`ANTHROPIC_API_KEY`) | anywhere |
+| `claude_cli` | **Claude Code CLI — your Claude subscription** | no | host only |
+| `mock` | deterministic offline extraction | no | anywhere |
+| `manual` | prompts to paste into Claude Desktop | no | host (you paste) |
+
+**No key set?** If `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` is empty, the
+pipeline automatically falls back to the **Claude Code CLI** (`claude`) using your
+subscription — provided `claude` is installed and logged in. Every CLI call writes
+a timestamped reference doc to `cli-runs/<org>-YYYYMMDD-HHMM.md` (command, prompt,
+raw output, parsed result) so you can see exactly what happened.
 
 ```bash
-make check     # validates ANTHROPIC_API_KEY; if missing/invalid it writes a
-               # timestamped, copy-paste help file to ingestion/diagnostics/
+make check     # reports the active mode and whether it's usable
 ```
+
+> **`claude_cli` is host-only.** It needs your `claude` login (subscription
+> credentials live on your Mac), so it does **not** work inside the Docker `ingest`
+> container — run the ingest natively for that path (`cd ingestion && uv run …`),
+> or use `mock` in containers. `mock` and a real API key work everywhere.
 
 ### Profile images
 
@@ -112,7 +132,7 @@ share exported from a Docker host / VM. See
 | `make down` | Stop everything. |
 | `make build` | Rebuild images from scratch (no cache) and recreate containers. |
 | `make clean` | Hard reset — wipe data volumes + built images for a fresh slate. |
-| `make check` | Validate the LLM API key (writes a help file if it's missing/invalid). |
+| `make check` | Report the active LLM mode and whether it's usable (key / subscription). |
 | `make test` / `make test-ingest` | Run the API / ingestion test suites in-container. |
 | `make logs` / `make ps` | Tail logs / list running services. |
 
