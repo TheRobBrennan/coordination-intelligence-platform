@@ -28,15 +28,31 @@ docs            ADRs, data model, runbook
 ## Quickstart
 
 ```bash
-cp .env.example .env          # fill in LLM key etc.
-docker compose -f infra/docker-compose.yml up -d   # neo4j + keycloak
-# ingestion (Python 3.12+, uv recommended)
-cd ingestion && uv sync && uv run pytest
-# api
-cd ../apps/api && uv sync && uv run pytest && uv run uvicorn app.main:app --reload
-# web
-cd ../web && pnpm install && pnpm dev
+cp .env.example .env          # fill in ANTHROPIC_API_KEY etc.
+pnpm install                  # root tools (concurrently) + workspace
+cd ingestion && uv sync && cd ..      # ingestion deps (one-time)
+cd apps/api && uv sync && cd ../..    # api deps (one-time)
+pnpm start                    # ← brings up everything (see below)
 ```
+
+## Local development — one command up, one command down
+
+Docker holds only the **slow services** (Neo4j + Keycloak). The API and web app
+run on the **host with hot reload**, so you rarely need to restart Docker — edit
+code and it reloads in place.
+
+| Command | What it does |
+|---|---|
+| `pnpm start` | Bring up Docker (Neo4j + Keycloak), then run the API (`uvicorn --reload`) and web (`next dev`) together with hot reload. `Ctrl+C` stops the apps; Docker keeps running. |
+| `pnpm stop` | Shut everything down — stops the API/web (ports 8000/3000) **and** the Docker services, in one command. |
+| `pnpm build` | Pull fresh Docker images and force-recreate the containers (clean image refresh). Data volumes are preserved. |
+| `pnpm clean` | Hard reset — remove containers, **data volumes**, and locally built images. Use when you want a clean Neo4j/Keycloak slate. |
+| `pnpm dev` | Just the apps (assumes Docker is already up via `pnpm infra:up`). |
+| `pnpm infra:up` / `infra:down` | Start / stop only the Docker services. |
+
+> Note: `pnpm dev:web` / `pnpm start` need `apps/web` scaffolded first
+> (`create-next-app` — see `apps/web/README.md`). Until then, run the API alone
+> with `pnpm dev:api`.
 
 See `docs/runbook.md` for the full demo flow.
 
