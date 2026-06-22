@@ -1,7 +1,7 @@
 {
-  "realm": "cxc",
+  "realm": "platform",
   "enabled": true,
-  "displayName": "CXC Coordination Intelligence",
+  "displayName": "Coordination Intelligence Platform",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "roles": {
@@ -13,8 +13,8 @@
   },
   "clients": [
     {
-      "clientId": "cxc-web",
-      "name": "CXC Web (Next.js)",
+      "clientId": "platform-web",
+      "name": "Platform Web (Next.js)",
       "enabled": true,
       "publicClient": false,
       "standardFlowEnabled": true,

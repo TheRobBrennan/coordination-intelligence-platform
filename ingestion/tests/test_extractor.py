@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from cxc_ingest.adapters.base import LLMAdapter
-from cxc_ingest.extractor import extract_topics, html_to_text
+from cip_ingest.adapters.base import LLMAdapter
+from cip_ingest.extractor import extract_topics, html_to_text
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_org.html"
 

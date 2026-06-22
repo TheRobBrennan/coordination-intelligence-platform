@@ -1,7 +1,7 @@
 [project]
-name = "cxc-api"
+name = "cip-api"
 version = "0.1.0"
-description = "CXC PoC read API over the Neo4j coordination graph"
+description = "Coordination Intelligence Platform PoC read API over the Neo4j coordination graph"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

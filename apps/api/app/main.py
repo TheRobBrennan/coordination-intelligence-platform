@@ -1,4 +1,4 @@
-"""CXC read API — the only thing the demo UI talks to.
+"""Coordination Intelligence read API — the only thing the demo UI talks to.
 
 Read-only over the coordination graph. Auth is intentionally NOT enforced here
 in the PoC; when Keycloak is wired in, add a verify-JWT dependency at this seam
@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     await app.state.graph.close()
 
 
-app = FastAPI(title="CXC Coordination Intelligence API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Coordination Intelligence Platform API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

@@ -1,6 +1,6 @@
 # ADR-0001 — PoC architecture
 
-Status: accepted (2026-06-22) · Context: 2-week CXC PoC
+Status: accepted (2026-06-22) · Context: 2-week PoC
 
 ## Decision
 A monorepo with three deployables and a clean read/write split:
@@ -23,7 +23,7 @@ A monorepo with three deployables and a clean read/write split:
 |---|---|---|
 | Hosting | Hybrid: local Docker + deploy to Vercel/AuraDB | Shareable URL for stakeholders; heavy work stays local |
 | Auth | Keycloak (Docker), behind a seam | Rob wants real per-user accounts (rob/kathy/+); swappable later |
-| LLM | Pluggable, default Claude | Quality default; hedges if CXC mandates Azure OpenAI |
+| LLM | Pluggable, default Claude | Quality default; hedges if the client mandates Azure OpenAI |
 | Graph | Neo4j | Adjacency/overlap queries are the core use case |
 
 ## Out of scope (PoC)

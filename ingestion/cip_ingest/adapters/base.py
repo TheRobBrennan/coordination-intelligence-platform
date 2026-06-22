@@ -2,7 +2,7 @@
 
 The extractor depends only on `LLMAdapter`. Swapping providers (Claude →
 OpenAI/Azure) is an env-var change (LLM_PROVIDER), never a code change in the
-pipeline. This is the boundary that keeps the PoC portable to whatever CXC
+pipeline. This is the boundary that keeps the PoC portable to whatever the client
 mandates in production.
 """
 

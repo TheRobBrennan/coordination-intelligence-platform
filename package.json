@@ -1,8 +1,8 @@
 {
-  "name": "cxc-poc",
+  "name": "coordination-intelligence-platform",
   "private": true,
   "version": "0.1.0",
-  "description": "CXC Coordination Intelligence Platform — PoC monorepo",
+  "description": "Coordination Intelligence Platform — PoC monorepo",
   "scripts": {
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",

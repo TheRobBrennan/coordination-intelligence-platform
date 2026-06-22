@@ -1,4 +1,4 @@
-# apps/web — CXC search UI
+# apps/web — Coordination Intelligence search UI
 
 Next.js (App Router) front end: topic/org search + force-directed graph view.
 

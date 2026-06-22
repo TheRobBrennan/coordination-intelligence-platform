@@ -1,6 +1,6 @@
-# CXC Coordination Intelligence Platform — PoC
+# Coordination Intelligence Platform — PoC
 
-A graph-based coordination-intelligence proof of concept for CXC. Type a topic →
+A graph-based coordination-intelligence proof of concept. Type a topic →
 see which organizations across critical-infrastructure sectors are working on it,
 with source evidence, and explore how they connect.
 

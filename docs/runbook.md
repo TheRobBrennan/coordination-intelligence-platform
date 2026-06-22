@@ -1,4 +1,4 @@
-# CXC PoC — Runbook
+# Coordination Intelligence Platform — Runbook
 
 ## 0. Prereqs
 - Docker, Python 3.12+ (`uv` recommended), Node 20+ (`pnpm`).
@@ -11,8 +11,8 @@ docker compose -f infra/docker-compose.yml up -d
 ```
 - Neo4j browser: http://localhost:7474 (neo4j / $NEO4J_PASSWORD)
 - Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
-  - Realm `cxc` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst).
-  - ⚠️ Passwords in `infra/keycloak/cxc-realm.json` are temporary placeholders
+  - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst).
+  - ⚠️ Passwords in `infra/keycloak/realm-export.json` are temporary placeholders
     (`changeme`) — change on first login and set the real client secret in `.env`.
 
 ## 2. Run the test suites (all should be green before any feature work)
@@ -26,7 +26,7 @@ cd ../web && pnpm install && pnpm test                     # vitest (once scaffo
 ```bash
 cd ingestion
 uv run playwright install chromium       # one-time
-uv run python -m cxc_ingest.run --seed seed/organizations.json   # (run.py = day 3-4)
+uv run python -m cip_ingest.run --seed seed/organizations.json   # (run.py = day 3-4)
 ```
 Re-runs are idempotent (MERGE) — this doubles as the "refresh agent".
 

@@ -1,4 +1,4 @@
-# Local dev stack for the CXC PoC.
+# Local dev stack for the Coordination Intelligence Platform PoC.
 #   neo4j     — graph DB (browser at http://localhost:7474)
 #   keycloak  — auth / roles / accounts (admin console at http://localhost:8080)
 #   kc-postgres — keycloak's backing store
@@ -8,7 +8,7 @@
 services:
   neo4j:
     image: neo4j:5-community
-    container_name: cxc-neo4j
+    container_name: cip-neo4j
     ports:
       - "7474:7474"   # browser
       - "7687:7687"   # bolt
@@ -25,7 +25,7 @@ services:
 
   kc-postgres:
     image: postgres:16-alpine
-    container_name: cxc-kc-postgres
+    container_name: cip-kc-postgres
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -35,7 +35,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
-    container_name: cxc-keycloak
+    container_name: cip-keycloak
     command: start-dev --import-realm
     depends_on:
       - kc-postgres
