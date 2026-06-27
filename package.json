@@ -3,8 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "description": "Coordination Intelligence Platform — PoC monorepo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheRobBrennan/coordination-intelligence-platform.git"
+  },
   "scripts": {
-    "start": "make up",
+    "start": "make up-web",
+    "start:web": "make up-web",
     "stop": "make down",
     "build": "make build",
     "clean": "make clean",
