@@ -45,8 +45,9 @@ That's it. `make up` brings up:
 | Keycloak (auth) | http://localhost:8080 | realm `platform` auto-seeds users `rob` / `kathy` |
 | API (FastAPI) | http://localhost:8000 | hot reload — edit `apps/api`, it reloads in place |
 
-`Ctrl+C` stops it. The web UI (`apps/web`) starts too once it's scaffolded —
-`make up-web` (see [`apps/web/README.md`](apps/web/README.md)). In Docker Desktop
+`Ctrl+C` stops it. Add the web UI (`apps/web`) with `make up-web` (see
+[`apps/web/README.md`](apps/web/README.md)) — `pnpm start` runs this by default.
+In Docker Desktop
 everything is grouped under **`coordination-intelligence-platform`** with `cip-*`
 container names, so it's easy to spot among other projects.
 
@@ -128,7 +129,7 @@ share exported from a Docker host / VM. See
 |---|---|
 | `make` | List all targets (this is the default). |
 | `make up` | Build + start the stack (Neo4j + Keycloak + API), with hot reload. |
-| `make up-web` | Same, plus the Next.js web app (once `apps/web` exists). |
+| `make up-web` | Same, plus the Next.js web app. `pnpm start` / `pnpm start:web` run this. |
 | `make down` | Stop everything. |
 | `make build` | Rebuild images from scratch (no cache) and recreate containers. |
 | `make clean` | Hard reset — wipe data volumes + built images for a fresh slate. |
@@ -152,8 +153,8 @@ Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
 
 If you'd rather run the API directly on your machine for faster reloads, you
 can — you'll need Python 3.14 + uv installed (`cd apps/api && uv run uvicorn
-app.main:app --reload`, or the shortcut `pnpm dev:api`). For the web app, once
-it's scaffolded, use `pnpm dev:web`. With `nvm`, just `nvm use` in the repo
+app.main:app --reload`, or the shortcut `pnpm dev:api`). For the web app, use
+`pnpm dev:web`. With `nvm`, just `nvm use` in the repo
 root (it reads `.nvmrc` → Node 24.17.0); pnpm is pinned via `packageManager`,
 so `corepack enable` makes the repo use 11.8.0 automatically. `pnpm start` /
 `stop` / `build` / `clean` are thin wrappers around the matching `make`

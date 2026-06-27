@@ -86,7 +86,8 @@ The root scripts wrap everything — you rarely call `pnpm --filter` directly:
 
 ```bash
 pnpm install     # install JS deps for the whole workspace
-pnpm start       # = make up   (Neo4j + Keycloak + API, hot reload)
+pnpm start       # = make up-web   (Neo4j + Keycloak + API + web, hot reload)
+pnpm start:web   # = make up-web   (explicit alias for the same thing)
 pnpm stop        # = make down
 pnpm build       # = make build
 pnpm clean       # = make clean (wipes volumes)
@@ -100,10 +101,6 @@ for the actual `docker compose` invocation, so there's nowhere for the two to
 drift out of sync. Use whichever you have muscle memory for; they're identical.
 
 See the **Local development** table in the root `README.md` for the full list.
-
-> Heads-up: `apps/web` isn't generated yet. When you scaffold it, the command is
-> `pnpm create next-app@latest .` (pnpm's equivalent of `npm create`) — see
-> `apps/web/README.md`.
 
 ## 6. Gotchas coming from npm
 
@@ -175,7 +172,7 @@ open a new terminal tab) to pick them up.
 > or `pre-deploy` scripts — those `pp*` aliases exist only to mirror your npm
 > habits 1:1. The ones that map to real scripts in *this* repo are `ppb`
 > (`pnpm build` → `make build`), `ppc` (`pnpm clean` → `make clean`), `pps`
-> (`pnpm start` → `make up`), `ppst` (`pnpm stop` → `make down`), and
+> (`pnpm start` → `make up-web`), `ppst` (`pnpm stop` → `make down`), and
 > `ppr dev:api` / `ppr test:web` for the rest. See §5 above for the full list
 > of scripts that actually exist here.
 

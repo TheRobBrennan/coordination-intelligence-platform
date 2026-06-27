@@ -4,8 +4,10 @@ Guidance for Claude Code when working in this repo.
 
 ## Status
 
-Scaffolded by Opus 4.8, **not yet run locally**. `apps/web` is not generated yet
-(only `README.md`/`Dockerfile.dev` exist — see "First local run" below). Don't
+Scaffolded by Opus 4.8. `apps/web` is generated (Next.js, NextAuth/Keycloak
+sign-in wired up) but has no search/graph UI yet — just a sign-in/sign-out
+screen. Ingestion has never been run end-to-end against Neo4j, so `make up` /
+`make up-web` bring up an empty graph until the batch job is run once. Don't
 assume anything builds or boots until it's actually been verified end-to-end.
 
 ## What this is
