@@ -64,7 +64,7 @@ services:
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
     volumes:
-      # Realm + seed users (Rob, Kathy, …) imported on startup. See infra/keycloak.
+      # Realm + seed users (demo-admin, demo-analyst, …) imported on startup. See infra/keycloak.
       - ./keycloak:/opt/keycloak/data/import:ro
 
   api:

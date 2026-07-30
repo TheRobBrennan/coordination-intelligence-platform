@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 // Seed value from infra/keycloak/realm-export.json (temporary: false, so this
 // should be a one-shot login with no forced reset). NEW_PASSWORD is only used
 // as a fallback: if a prior run's defensive reset-form branch below ever did
-// fire and changed rob's password, retry against that value instead of the
+// fire and changed the admin user's password, retry against that value instead of the
 // stale seed one — self-healing without needing Keycloak admin API calls.
 const SEED_PASSWORD = "demo";
 const NEW_PASSWORD = "DevLocal!2026";
@@ -55,7 +55,7 @@ async function signInFromHome(page: Page, username: string) {
 }
 
 test("user can sign in via Keycloak, see their session, and sign out", async ({ page }) => {
-  await signInFromHome(page, "rob");
+  await signInFromHome(page, "demo-admin");
 
   await expect(page.getByText(/Signed in as/)).toBeVisible();
 
@@ -72,8 +72,8 @@ test("user can sign in via Keycloak, see their session, and sign out", async ({ 
 // whoever was previously signed in instead of showing a login form, and a
 // second user can never sign in without manually clearing cookies.
 test("signing out lets a different user sign in", async ({ page }) => {
-  await signInFromHome(page, "rob");
-  await expect(page.getByText(/Signed in as/)).toContainText("Rob");
+  await signInFromHome(page, "demo-admin");
+  await expect(page.getByText(/Signed in as/)).toContainText("Demo Admin");
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("button", { name: "Sign in with Keycloak" })).toBeVisible();
@@ -83,17 +83,17 @@ test("signing out lets a different user sign in", async ({ page }) => {
   // still-alive Keycloak SSO session.
   await page.getByLabel("Username or email").waitFor({ state: "visible", timeout: 5000 });
 
-  await fillAndSubmitLogin(page, "kathy", SEED_PASSWORD);
+  await fillAndSubmitLogin(page, "demo-analyst", SEED_PASSWORD);
   const invalidCredentials = await page
     .getByText(/Invalid username or password/i)
     .waitFor({ state: "visible", timeout: 3000 })
     .then(() => true)
     .catch(() => false);
   if (invalidCredentials) {
-    await fillAndSubmitLogin(page, "kathy", NEW_PASSWORD);
+    await fillAndSubmitLogin(page, "demo-analyst", NEW_PASSWORD);
   }
   await handlePasswordResetIfPresent(page, NEW_PASSWORD);
   await page.waitForURL("http://localhost:3000/");
 
-  await expect(page.getByText(/Signed in as/)).toContainText("Kathy");
+  await expect(page.getByText(/Signed in as/)).toContainText("Demo Analyst");
 });

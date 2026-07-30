@@ -4,7 +4,8 @@ Profile images for app users, kept in a plain folder so they're easy to manage
 without a storage service for the PoC.
 
 ## Convention
-- One image per user, named after the **Keycloak username**: `rob.svg`, `kathy.svg`, …
+- One image per user, named after the **Keycloak username**: `demo-admin.svg`,
+  `demo-analyst.svg`, …
 - Square, ~256px, `.svg` / `.png` / `.jpg`. `manifest.json` maps username → file.
 - Seed users ship with placeholder SVGs (initials). Replace with real images any time.
 
