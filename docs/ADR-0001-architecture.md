@@ -22,7 +22,7 @@ A monorepo with three deployables and a clean read/write split:
 | Area | Choice | Why |
 |---|---|---|
 | Hosting | Hybrid: local Docker + deploy to Vercel/AuraDB | Shareable URL for stakeholders; heavy work stays local |
-| Auth | Keycloak (Docker), behind a seam | Rob wants real per-user accounts (rob/kathy/+); swappable later |
+| Auth | Keycloak (Docker), behind a seam | Real per-user accounts are required (seeded `demo-admin`/`demo-analyst`, more later); swappable later |
 | LLM | Pluggable, default Claude | Quality default; hedges if the client mandates Azure OpenAI |
 | Graph | Neo4j | Adjacency/overlap queries are the core use case |
 

@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "source": "Inaugural Org List (revised PRD doc), 2026-06-19",
+    "source": "Project seed org list, 2026-06-19",
     "note": "Seed list for the PoC ingestion run. needs_validation orgs are kept but flagged; the scraper should not hard-fail on them.",
     "count": 26
   },

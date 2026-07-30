@@ -42,7 +42,7 @@ That's it. `make up` brings up:
 | Service | URL | Notes |
 |---|---|---|
 | Neo4j (graph DB) | http://localhost:7474 | browser; bolt on :7687 |
-| Keycloak (auth) | http://localhost:8080 | realm `platform` auto-seeds users `rob` / `kathy` |
+| Keycloak (auth) | http://localhost:8080 | realm `platform` auto-seeds users `demo-admin` / `demo-analyst` |
 | API (FastAPI) | http://localhost:8000 | hot reload — edit `apps/api`, it reloads in place |
 
 `Ctrl+C` stops it. Add the web UI (`apps/web`) with `make up-web` (see
@@ -63,8 +63,8 @@ Everything below is local-dev defaults from `.env.example` / the seed realm —
 | API — topics | http://localhost:8000/topics | — | — |
 | Neo4j Browser | http://localhost:7474 | `neo4j` | `devpassword` |
 | Keycloak admin | http://localhost:8080/admin | `admin` | `admin` |
-| App user (admin role) | via the web app | `rob` | `demo` |
-| App user (analyst role) | via the web app | `kathy` | `demo` |
+| App user (admin role) | via the web app | `demo-admin` | `demo` |
+| App user (analyst role) | via the web app | `demo-analyst` | `demo` |
 
 > Neo4j Bolt connection string for tools: `bolt://localhost:7687` (`neo4j` / `devpassword`).
 
@@ -72,7 +72,7 @@ Everything below is local-dev defaults from `.env.example` / the seed realm —
 
 These defaults are fine on `localhost`; rotate them before any shared/remote use.
 
-- **App users (`rob`, `kathy`)** — sign in at the web app and change it from the
+- **App users (`demo-admin`, `demo-analyst`)** — sign in at the web app and change it from the
   Keycloak Account console (http://localhost:8080/realms/platform/account), or
   reset it for someone else: Keycloak admin → realm `platform` → Users →
   *user* → Credentials.

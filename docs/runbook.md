@@ -15,10 +15,14 @@ make up                     # Neo4j + Keycloak + API (hot reload). Ctrl+C stops.
 ```
 - Neo4j browser: http://localhost:7474 (neo4j / $NEO4J_PASSWORD)
 - API: http://localhost:8000  ·  Keycloak admin: http://localhost:8080 (admin / $KC_ADMIN_PASSWORD)
-  - Realm `platform` is auto-imported with users **rob** (admin, analyst) and **kathy** (analyst),
+  - Realm `platform` is auto-imported with users **demo-admin** (admin, analyst) and **demo-analyst** (analyst),
     both seeded with password `demo` — no forced reset, so the demo can sign straight in.
   - ⚠️ These are local-dev placeholders — rotate them and set the real client
     secret in `.env` before anything leaves your machine.
+  - ⚠️ `--import-realm` only imports when the realm doesn't already exist. If you
+    edit `infra/keycloak/realm-export.json` (seed users, roles, client) after a
+    first boot, run `make clean && make up` — otherwise Keycloak keeps the realm
+    already stored in its Postgres volume and your edits appear to do nothing.
 
 ## 2. Run the test suites (all should be green before any feature work)
 ```bash
@@ -50,7 +54,7 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 `make up` already serves the API (`:8000`) and, with `make up-web`, the web UI
 (`:3000`) — both with hot reload. No separate serve step.
 
-## 5. Demo flow for Kathy
+## 5. Demo flow (analyst walkthrough)
 1. Search a topic (e.g. "supply chain resilience") → list of orgs across sectors.
 2. Click an org → its topics + the **source evidence** + confidence per edge.
 3. Graph view → see cross-sector overlap; highlight two orgs on the same topic
