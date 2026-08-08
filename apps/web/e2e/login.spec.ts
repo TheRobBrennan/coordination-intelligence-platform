@@ -33,8 +33,11 @@ async function handlePasswordResetIfPresent(page: Page, password: string) {
 
 // Click "Sign in with Keycloak" from the home page and complete the login
 // form, retrying once with NEW_PASSWORD if the seed password turns out to be
-// stale (see the module comment above).
-async function signInFromHome(page: Page, username: string) {
+// stale (see the module comment above). baseURL is threaded through instead
+// of hardcoded so this runs correctly against any PLAYWRIGHT_BASE_URL, not
+// just localhost — e.g. `PLAYWRIGHT_BASE_URL=https://cip-preview-web.sploosh.ai
+// pnpm exec playwright test` for the tunnel preview.
+async function signInFromHome(page: Page, username: string, baseURL: string) {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
   await page.waitForURL(/\/realms\/platform\/protocol\/openid-connect\/auth/);
@@ -51,11 +54,11 @@ async function signInFromHome(page: Page, username: string) {
   }
 
   await handlePasswordResetIfPresent(page, NEW_PASSWORD);
-  await page.waitForURL("http://localhost:3000/");
+  await page.waitForURL(baseURL + "/");
 }
 
-test("user can sign in via Keycloak, see their session, and sign out", async ({ page }) => {
-  await signInFromHome(page, "demo-admin");
+test("user can sign in via Keycloak, see their session, and sign out", async ({ page, baseURL }) => {
+  await signInFromHome(page, "demo-admin", baseURL ?? "http://localhost:3000");
 
   await expect(page.getByText(/Signed in as/)).toBeVisible();
 
@@ -71,8 +74,9 @@ test("user can sign in via Keycloak, see their session, and sign out", async ({ 
 // doesn't, the next "Sign in with Keycloak" click silently re-authenticates
 // whoever was previously signed in instead of showing a login form, and a
 // second user can never sign in without manually clearing cookies.
-test("signing out lets a different user sign in", async ({ page }) => {
-  await signInFromHome(page, "demo-admin");
+test("signing out lets a different user sign in", async ({ page, baseURL }) => {
+  const resolvedBaseURL = baseURL ?? "http://localhost:3000";
+  await signInFromHome(page, "demo-admin", resolvedBaseURL);
   await expect(page.getByText(/Signed in as/)).toContainText("Demo Admin");
 
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -93,7 +97,7 @@ test("signing out lets a different user sign in", async ({ page }) => {
     await fillAndSubmitLogin(page, "demo-analyst", NEW_PASSWORD);
   }
   await handlePasswordResetIfPresent(page, NEW_PASSWORD);
-  await page.waitForURL("http://localhost:3000/");
+  await page.waitForURL(resolvedBaseURL + "/");
 
   await expect(page.getByText(/Signed in as/)).toContainText("Demo Analyst");
 });
