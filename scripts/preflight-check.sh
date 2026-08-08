@@ -16,16 +16,23 @@
 # script does both, every time.
 #
 # Usage:
-#   ./scripts/preflight-check.sh            # pauses between stages
-#   ./scripts/preflight-check.sh --no-pause  # runs straight through, no Enter needed
+#   ./scripts/preflight-check.sh              # pauses between stages
+#   ./scripts/preflight-check.sh --no-pause   # runs straight through, no Enter needed
+#   ./scripts/preflight-check.sh --headed     # real visible browser windows,
+#                                              # slowed down — for watching
+#                                              # with someone, not just for
+#                                              # yourself. Implies pausing
+#                                              # unless --no-pause is also given.
 #
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 PAUSE=1
+HEADED=0
 for arg in "$@"; do
   case "$arg" in
     --no-pause|-y) PAUSE=0 ;;
+    --headed) HEADED=1 ;;
     *) echo "Unknown flag: $arg" >&2; exit 1 ;;
   esac
 done
@@ -40,23 +47,6 @@ fail() { printf '%s✗ %s%s\n' "$RED" "$*" "$RESET"; exit 1; }
 pause() {
   [ "$PAUSE" -eq 1 ] || return 0
   read -r -p "$(printf '%s— press Enter to continue —%s ' "$YELLOW" "$RESET")"
-}
-
-# Waits for $2 (a grep -E pattern) to appear in $1 (a log file), polling every
-# 2s up to $3 seconds. Also bails early on common fatal-startup signatures so
-# a genuinely broken run fails fast instead of waiting out the full timeout.
-wait_for_log() {
-  local file="$1" pattern="$2" timeout="${3:-120}" waited=0
-  until grep -qE "$pattern" "$file" 2>/dev/null; do
-    if grep -qiE "unable to start|fatal|panic|bind: address already in use" "$file" 2>/dev/null; then
-      fail "Saw a fatal error in $file — check it directly."
-    fi
-    waited=$((waited + 2))
-    if [ "$waited" -ge "$timeout" ]; then
-      fail "Timed out after ${timeout}s waiting for /$pattern/ in $file"
-    fi
-    sleep 2
-  done
 }
 
 # Waits for $1 to answer HTTP 200, polling every 2s up to $2 seconds (default
@@ -75,15 +65,27 @@ wait_for_http() {
   done
 }
 
-# Runs the existing login.spec.ts against $1, headless. This is the actual
-# proof — not "the page loaded," but "sign in, session shows, sign out,
-# lands back on the right host" all pass as real assertions.
+# Runs the existing login.spec.ts against $1. Headless by default — the
+# actual proof either way is the assertions (sign in, session shows, sign
+# out, lands back on the right host), not what's on screen. With --headed,
+# a real visible browser window does it slowly enough to watch — same
+# PLAYWRIGHT_SLOW_MO convention the repo's own `make test-web-headed`
+# already uses. Timeout is bumped for the headed case since slowMo adds real
+# wall-clock time to every action; 30s (the default) is fine headless but
+# tight once each step is deliberately slowed down.
 verify_login() {
   local base_url="$1" label="$2"
   log "Proving login end-to-end against $label ($base_url)"
-  ( cd apps/web && PLAYWRIGHT_BASE_URL="$base_url" pnpm exec playwright test e2e/login.spec.ts ) \
-    && ok "Login verified on $label" \
-    || fail "Login FAILED on $label — see Playwright output above"
+  if [ "$HEADED" -eq 1 ]; then
+    ( cd apps/web && PLAYWRIGHT_BASE_URL="$base_url" PLAYWRIGHT_SLOW_MO=500 \
+        pnpm exec playwright test e2e/login.spec.ts --headed --workers=1 --timeout=45000 ) \
+      && ok "Login verified on $label" \
+      || fail "Login FAILED on $label — see Playwright output above"
+  else
+    ( cd apps/web && PLAYWRIGHT_BASE_URL="$base_url" pnpm exec playwright test e2e/login.spec.ts ) \
+      && ok "Login verified on $label" \
+      || fail "Login FAILED on $label — see Playwright output above"
+  fi
 }
 
 # Neo4j has its own auth, unrelated to Keycloak — a plain REST call is enough
@@ -110,18 +112,28 @@ WEB_TUNNEL="https://cip-preview-web.sploosh.ai"
 AUTH_TUNNEL="https://cip-preview-auth.sploosh.ai"
 NEO4J_TUNNEL="https://cip-preview-neo4j.sploosh.ai"
 
-UP_LOG=$(mktemp -t cip-preflight-up-web)
-TUNNEL_LOG=$(mktemp -t cip-preflight-up-tunnel)
+# Same compose files/flags as the Makefile's up-web/up-tunnel targets, but
+# with -d instead of foreground. Found by testing: `make up-web` runs
+# `docker compose up --build` with no -d — an attached, foreground process.
+# Backgrounding *that* inside this script doesn't actually detach it; when
+# the script's own process exits, the still-attached compose process (and the
+# containers with it) get torn down too — `docker ps -a` showed every
+# container Exited (137/143 — killed) within a minute of a prior run
+# finishing, directly contradicting "left running, ready to walk into the
+# meeting." -d makes the containers genuinely independent daemon processes,
+# which is required for that promise to actually hold once this script exits.
+COMPOSE="docker compose -f infra/docker-compose.yml --env-file .env"
+TUNNEL_COMPOSE="docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env"
 
 # ── 1. Clean slate ────────────────────────────────────────────────────────
-log "Step 1/6 — clean slate (make clean, then make up-web)"
+log "Step 1/6 — clean slate (make clean, then bring the local stack up)"
 echo "Wipes volumes/images so nothing stale can hide a real bug. Costs nothing"
 echo "right now: no data has been ingested yet. Also the only way the rotated"
 echo "NEO4J_PASSWORD actually takes effect — it's baked into the volume at"
 echo "first init, same as the Keycloak realm."
 make clean
-( make up-web > "$UP_LOG" 2>&1 & )
-wait_for_log "$UP_LOG" 'Ready in' 180
+$COMPOSE --profile web up -d --build
+wait_for_http "$WEB_LOCAL" 180
 ok "Local stack is up"
 
 open -a Safari "$WEB_LOCAL"
@@ -131,11 +143,14 @@ verify_neo4j "$NEO4J_LOCAL" "localhost"
 pause
 
 # ── 2. Tunnel up ──────────────────────────────────────────────────────────
-log "Step 2/6 — bring the tunnel up (make up-tunnel)"
-( make up-tunnel > "$TUNNEL_LOG" 2>&1 & )
-wait_for_log "$TUNNEL_LOG" 'Registered tunnel connection' 120
-wait_for_log "$TUNNEL_LOG" 'Ready in' 60
-ok "Tunnel is connected"
+log "Step 2/6 — bring the tunnel up"
+$TUNNEL_COMPOSE --profile web --profile tunnel up -d --build
+# Polling the actual public URL is a stronger signal than grepping cloudflared's
+# logs for "Registered tunnel connection" — it proves the tunnel connected AND
+# is routing correctly AND the app is answering, all in one check, instead of
+# just "cloudflared talked to Cloudflare's edge."
+wait_for_http "$WEB_TUNNEL" 120
+ok "Tunnel is connected and routing"
 
 # "Ready in" only means the process started; Next.js still JIT-compiles each
 # route on its first real hit, and this is also the tunnel's first actual
