@@ -20,7 +20,15 @@ after itself, and leaves the stack running local-only, so this *is* the
 
 ```bash
 cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
-./scripts/preflight-check.sh --no-pause
+./scripts/preflight-check.sh --no-pause   # solo check, fast, unattended
+```
+
+Save `--headed` for the table, not this solo run — it's slowed down on
+purpose so a person watching can follow it, which just makes a check you're
+doing alone take longer for no benefit:
+
+```bash
+./scripts/preflight-check.sh --headed     # run this one again, live, with Kathy
 ```
 
 If there's no time for the full run, at minimum bring the stack up and sign
