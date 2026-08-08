@@ -79,6 +79,22 @@ async def stats(request: Request) -> dict:
     return await _graph(request).admin_stats()
 
 
+@router.get("/graph")
+async def graph_snapshot(request: Request) -> dict:
+    """The whole graph as org/topic nodes + edges, for the BTS page's live
+    visualization — not filtered by any topic search."""
+    edges = await _graph(request).full_graph()
+    orgs = {e["org"]: e["sector"] for e in edges}
+    topics = sorted({e["topic"] for e in edges})
+    return {
+        "orgs": [{"name": n, "sector": s} for n, s in orgs.items()],
+        "topics": topics,
+        "edges": [
+            {"org": e["org"], "topic": e["topic"], "confidence": e["confidence"]} for e in edges
+        ],
+    }
+
+
 @router.get("/seed")
 async def seed_status(request: Request) -> dict:
     graph = _graph(request)

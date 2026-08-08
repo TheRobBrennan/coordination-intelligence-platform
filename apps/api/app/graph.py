@@ -16,6 +16,7 @@ class Graph(Protocol):
     async def topics_for_org(self, org: str) -> list[dict]: ...
     async def topics(self) -> list[str]: ...
     async def admin_stats(self) -> dict: ...
+    async def full_graph(self) -> list[dict]: ...
     async def loaded_org_names(self) -> list[str]: ...
     async def wipe_coordination_graph(self) -> None: ...
     async def load_org(self, org: dict, topics: list[dict]) -> None: ...
@@ -75,6 +76,16 @@ class Neo4jGraph:
             "relationships": rels[0]["n"],
             "last_ingested": rels[0]["last_ingested"],
         }
+
+    async def full_graph(self) -> list[dict]:
+        return await self._run(
+            """
+            MATCH (o:Organization)-[r:WORKS_ON]->(t:Topic)
+            RETURN o.name AS org, o.sector AS sector, t.name AS topic,
+                   r.confidence AS confidence
+            ORDER BY t.name, r.confidence DESC
+            """
+        )
 
     async def loaded_org_names(self) -> list[str]:
         rows = await self._run("MATCH (o:Organization) RETURN o.name AS name")

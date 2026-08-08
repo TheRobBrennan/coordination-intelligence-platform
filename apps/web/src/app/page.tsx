@@ -1,4 +1,5 @@
 import { signIn, signOut } from "@/auth";
+import GraphViz from "@/lib/GraphViz";
 import { getSession } from "@/lib/session";
 
 const API_BASE =
@@ -144,6 +145,17 @@ export default async function Home({
           <p className="text-zinc-500 dark:text-zinc-400">
             No organizations found for &ldquo;{q}&rdquo; yet. Try one of the topics above.
           </p>
+        )}
+
+        {q && results.length > 0 && (
+          <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <GraphViz
+              topics={[...new Set(results.map((r) => r.topic))]}
+              orgs={[...new Map(results.map((r) => [r.org, { name: r.org, sector: r.sector }])).values()]}
+              edges={results}
+              height={280}
+            />
+          </div>
         )}
 
         {Object.entries(bySector).map(([sector, orgs]) => (

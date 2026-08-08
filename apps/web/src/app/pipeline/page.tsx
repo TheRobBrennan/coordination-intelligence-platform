@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { signIn } from "@/auth";
 import { getSession } from "@/lib/session";
+import GraphViz from "@/lib/GraphViz";
 import LocalTime from "./LocalTime";
 import ScrollToTop from "./ScrollToTop";
 
@@ -41,6 +42,17 @@ async function getSeedStatus(): Promise<{
   total_count: number;
 }> {
   const res = await fetch(`${API_BASE}/admin/seed`, { cache: "no-store" });
+  return res.json();
+}
+
+type GraphSnapshot = {
+  orgs: { name: string; sector: string }[];
+  topics: string[];
+  edges: { org: string; topic: string; confidence: number }[];
+};
+
+async function getGraph(): Promise<GraphSnapshot> {
+  const res = await fetch(`${API_BASE}/admin/graph`, { cache: "no-store" });
   return res.json();
 }
 
@@ -209,7 +221,7 @@ export default async function Pipeline() {
     );
   }
 
-  const [stats, seed] = await Promise.all([getStats(), getSeedStatus()]);
+  const [stats, seed, graph] = await Promise.all([getStats(), getSeedStatus(), getGraph()]);
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-10 font-sans dark:bg-black">
@@ -261,6 +273,13 @@ export default async function Pipeline() {
               Last ingested <LocalTime iso={stats.last_ingested} />
             </p>
           )}
+          <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <GraphViz topics={graph.topics} orgs={graph.orgs} edges={graph.edges} />
+            <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
+              &#9679; large dots are topics, small dots are organizations — hover a dot for its name.
+              Updates instantly after any reset/run action above.
+            </p>
+          </div>
         </div>
 
         {/* Reset action */}
