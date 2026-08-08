@@ -161,6 +161,27 @@ function StageRow({ stage }: { stage: { emoji: string; title: string; detail: Re
   );
 }
 
+function RunButtons() {
+  return (
+    <div className="flex gap-3">
+      <button
+        type="submit"
+        formAction={runSelected}
+        className="text-sm text-zinc-700 underline hover:opacity-70 dark:text-zinc-300"
+      >
+        Run selected
+      </button>
+      <button
+        type="submit"
+        formAction={runAllCached}
+        className="text-sm text-zinc-700 underline hover:opacity-70 dark:text-zinc-300"
+      >
+        Run all cached
+      </button>
+    </div>
+  );
+}
+
 export default async function Pipeline() {
   const session = await getSession();
 
@@ -327,22 +348,7 @@ export default async function Pipeline() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Seed list — {seed.loaded_count} of {seed.total_count} loaded
             </h2>
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                formAction={runSelected}
-                className="text-sm text-zinc-700 underline hover:opacity-70 dark:text-zinc-300"
-              >
-                Run selected
-              </button>
-              <button
-                type="submit"
-                formAction={runAllCached}
-                className="text-sm text-zinc-700 underline hover:opacity-70 dark:text-zinc-300"
-              >
-                Run all cached
-              </button>
-            </div>
+            <RunButtons />
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             Checkboxes only work for orgs with a cached snapshot (grayed out otherwise —
@@ -379,6 +385,9 @@ export default async function Pipeline() {
                 </span>
               </label>
             ))}
+          </div>
+          <div className="flex justify-end">
+            <RunButtons />
           </div>
         </form>
       </div>
