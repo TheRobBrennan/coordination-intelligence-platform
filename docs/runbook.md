@@ -102,23 +102,41 @@ make logs-tunnel     # tail the tunnel's connection status
 
 ### Verifying it actually works
 
+**The tunnel-enabled stack and the plain local stack cannot run at the same
+time** — `web` binds host port 3000 in both. Verifying "the tunnel works" and
+verifying "local still works, untouched" are two separate runs, not one run
+checked from two browser tabs:
+
 1. `make up-tunnel`, wait for `cloudflared` to report a healthy connection in
    `make logs-tunnel`
 2. Visit `https://cip-preview-web.sploosh.ai` in a browser, sign in with a real
    Keycloak account (e.g. `demo-analyst` / `demo`), confirm the session shows,
    sign out, confirm it lands back on `cip-preview-web.sploosh.ai` (not
    localhost)
-3. In a **separate terminal**, confirm `make up-web` (no tunnel) still signs in
-   cleanly on `http://localhost:3000` — this is the guarantee that step 2 never
-   put localhost at risk
-4. `make down-tunnel`, confirm the web/api/neo4j/keycloak containers are still
-   running (`make ps`) and `localhost:3000` still works
+3. `make down-tunnel` (or stop the whole stack), then bring up a plain
+   `make up-web` — no `-tunnel.yml` involved at all — and sign in again on
+   `http://localhost:3000` from a fresh tab. This is the actual local-fallback
+   guarantee; visiting `localhost:3000` *while the tunnel stack is still
+   running* is not the same test and will not pass — see the gotcha below.
 
-If step 2 fails partway (e.g. login redirects to the wrong host), the fix lives
-in `infra/docker-compose.tunnel.yml`'s `web.environment` block
-(`KEYCLOAK_ISSUER` / `POST_LOGOUT_REDIRECT_URI`) or in the realm's
-`redirectUris` — never in the base `docker-compose.yml`.
+**Gotcha, found by testing, not by reading the compose file:** once `AUTH_URL`
+is set (see below), Auth.js issues `Secure`-flagged cookies, which browsers
+refuse to store over a plain `http://` connection. So while the tunnel-enabled
+stack is up, even hitting `localhost:3000` directly breaks login
+(`InvalidCheck: pkceCodeVerifier value could not be parsed`) — the two modes
+are mutually exclusive, not "same app, different door."
 
-See `docs/plans/plan-2026-08-08-kathy-demo.md` for the full design rationale —
-why `KEYCLOAK_ISSUER` and not `KC_HOSTNAME` is the actual coupling point, and
-why the fix is a compose override rather than a shared `.env` edit.
+If sign-in over the tunnel fails partway, the fix lives in one of three places
+in `infra/docker-compose.tunnel.yml`, depending on the error:
+
+| Error | Fix location |
+|---|---|
+| `unexpected "iss" response parameter value` | `keycloak.environment.KC_HOSTNAME` — Keycloak is reporting `http` instead of `https` in its own issuer claim |
+| `redirect_uri did not match... parameter: https://localhost:3000/...` | `web.environment.AUTH_URL` — Host-header inference came back wrong through the tunnel |
+| Login redirects to the wrong host generally | `web.environment.KEYCLOAK_ISSUER` / `POST_LOGOUT_REDIRECT_URI`, or the realm's `redirectUris` |
+
+Never in the base `docker-compose.yml`.
+
+See `docs/plans/plan-2026-08-08-kathy-demo.md` for the full design rationale,
+including why the first read of the repo concluded `KC_HOSTNAME` wasn't needed
+— and why that conclusion turned out to be wrong once actually tested.

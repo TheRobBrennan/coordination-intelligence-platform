@@ -61,7 +61,7 @@ test-web:  ## Run all web tests: vitest unit + Playwright e2e (needs `make up-we
 test-web-headed:  ## Same as test-web, but Playwright runs headed and slowed down (PLAYWRIGHT_SLOW_MO=500ms) so you can actually watch it
 	PLAYWRIGHT_SLOW_MO=500 $(MAKE) test-web ARGS=--headed
 
-up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview at cip-preview-web/auth.sploosh.ai (needs TUNNEL_TOKEN in .env — see docs/runbook.md)
+up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview at cip-preview-web.sploosh.ai and cip-preview-auth.sploosh.ai (needs TUNNEL_TOKEN in .env — see docs/runbook.md)
 	$(TUNNEL_COMPOSE) --profile web --profile tunnel up --build
 
 down-tunnel:  ## Stop and remove just the tunnel container — web/api/etc keep running, base stack untouched

@@ -8,6 +8,10 @@
 #   - overrides the web service's KEYCLOAK_ISSUER and POST_LOGOUT_REDIRECT_URI
 #     to the public tunnel hostnames, so login/logout redirects match whichever
 #     origin the visitor is actually on
+#   - sets KC_HOSTNAME on keycloak — see the note on that service below, this
+#     one is not optional
+#   - sets AUTH_URL on web, for the same reason: trustHost's per-request Host
+#     header inference (fine on localhost) is not reliable behind the tunnel
 #
 # Requires TUNNEL_TOKEN in .env — see docs/runbook.md, "Preview (Cloudflare
 # Tunnel)" for how to create the tunnel in the Cloudflare dashboard and get one.
@@ -34,3 +38,31 @@ services:
       # container traffic and never leaves the Docker network either way.
       KEYCLOAK_ISSUER: https://cip-preview-auth.sploosh.ai/realms/platform
       POST_LOGOUT_REDIRECT_URI: https://cip-preview-web.sploosh.ai
+      # Found by actually testing: the "Sign in with Keycloak" click (a Server
+      # Action, POST to the current page) got the right redirect_uri because
+      # Next.js used the browser's Origin header there, which the tunnel
+      # doesn't touch. The OAuth callback (a plain GET route handler) instead
+      # relies on trustHost's Host-header inference, which came back as
+      # "localhost:3000" through the tunnel — causing Keycloak's token
+      # exchange to reject it: "redirect_uri did not match... Saved:
+      # https://cip-preview-web.sploosh.ai/..., parameter:
+      # https://localhost:3000/...". AUTH_URL is Auth.js v5's documented
+      # override for exactly this — an app behind a reverse proxy — and wins
+      # over Host-header inference entirely, so every URL Auth.js builds
+      # server-side is anchored to this value instead of guessed per-request.
+      AUTH_URL: https://cip-preview-web.sploosh.ai
+
+  keycloak:
+    environment:
+      # Found by actually testing the tunnel, not by reasoning about it:
+      # cloudflared terminates TLS at Cloudflare's edge, then talks to this
+      # container over plain HTTP inside the Docker network (correct — that
+      # hop should stay internal). With no fixed hostname, Keycloak reports
+      # the scheme it actually saw on that internal hop — "http" — in its own
+      # "iss" (issuer) claim. Auth.js compares that against the "https"
+      # issuer it expected and rejects the login with OperationProcessingError
+      # ("unexpected iss response parameter value") — a real login attempt
+      # over the tunnel fails at the final step even though every redirect up
+      # to that point looked correct. Fixing the scheme, not just the host,
+      # requires telling Keycloak explicitly rather than letting it infer.
+      KC_HOSTNAME: https://cip-preview-auth.sploosh.ai
