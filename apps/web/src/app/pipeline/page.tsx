@@ -111,6 +111,16 @@ const STAGES = [
     title: "Neo4j graph",
     detail: "(Organization)-[WORKS_ON {confidence, evidence}]->(Topic)",
   },
+  {
+    emoji: "\u{1F4E1}",
+    title: "Read API",
+    detail: "FastAPI, read-only over the graph — /topics, /topics/search, /orgs/{org}/topics",
+  },
+  {
+    emoji: "\u{1F5A5}\u{FE0F}",
+    title: "Web UI",
+    detail: "This app — Next.js Server Components query the API directly, no client-side fetch",
+  },
 ];
 
 export default async function Pipeline() {
@@ -159,35 +169,6 @@ export default async function Pipeline() {
           The graph you just searched didn&rsquo;t appear by magic — here&rsquo;s the
           pipeline that built it, and the current state of the data behind it.
         </p>
-
-        {/* Pipeline stages */}
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            How it works
-          </h2>
-          <div className="flex flex-col gap-2">
-            {STAGES.map((stage, i) => (
-              <div key={stage.title} className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg dark:border-zinc-700 dark:bg-zinc-900">
-                  {stage.emoji}
-                </div>
-                <div>
-                  <div className="font-medium text-black dark:text-zinc-50">
-                    {stage.title}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {stage.detail}
-                  </div>
-                </div>
-                {i < STAGES.length - 1 && (
-                  <div className="ml-5 hidden text-zinc-300 dark:text-zinc-700 sm:block">
-                    &darr;
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Live stats */}
         <div className="flex flex-col gap-3">
@@ -253,6 +234,41 @@ export default async function Pipeline() {
                 Clean to empty
               </button>
             </form>
+          </div>
+        </div>
+
+        {/* Pipeline stages */}
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            How it works
+          </h2>
+          <div className="flex flex-col">
+            {STAGES.map((stage, i) => (
+              <div key={stage.title} className="flex flex-col">
+                <div className="flex items-center gap-3">
+                  <div className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg dark:border-zinc-700 dark:bg-zinc-900">
+                    {stage.emoji}
+                  </div>
+                  <div>
+                    <div className="font-medium text-black dark:text-zinc-50">
+                      {stage.title}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {stage.detail}
+                    </div>
+                  </div>
+                </div>
+                {i < STAGES.length - 1 && (
+                  <div className="relative h-6 w-10 shrink-0 overflow-hidden">
+                    <div className="absolute left-1/2 h-full w-px -translate-x-1/2 bg-zinc-300 dark:bg-zinc-700" />
+                    <div
+                      className="pipeline-flow-dot absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
+                      style={{ animationDelay: `${i * 0.3}s` }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
