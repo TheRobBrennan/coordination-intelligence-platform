@@ -61,12 +61,13 @@ test-web:  ## Run all web tests: vitest unit + Playwright e2e (needs `make up-we
 test-web-headed:  ## Same as test-web, but Playwright runs headed and slowed down (PLAYWRIGHT_SLOW_MO=500ms) so you can actually watch it
 	PLAYWRIGHT_SLOW_MO=500 $(MAKE) test-web ARGS=--headed
 
-up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview at cip-preview-web.sploosh.ai and cip-preview-auth.sploosh.ai (needs TUNNEL_TOKEN in .env — see docs/runbook.md)
+up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview — three cip-preview-*.sploosh.ai hostnames (web, auth, neo4j); needs TUNNEL_TOKEN in .env — see docs/runbook.md
 	$(TUNNEL_COMPOSE) --profile web --profile tunnel up --build
 
-down-tunnel:  ## Stop and remove just the tunnel container — web/api/etc keep running, base stack untouched
-	$(TUNNEL_COMPOSE) stop cloudflared
-	$(TUNNEL_COMPOSE) rm -f cloudflared
+down-tunnel:  ## Stop the tunnel AND revert web/keycloak to local-only config (they keep running, recreated against the base compose file — not just "cloudflared removed")
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel stop cloudflared
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel rm -f cloudflared
+	$(COMPOSE) --profile web up -d --force-recreate web keycloak
 
 logs-tunnel:  ## Tail the tunnel container's logs (connection status, routed requests)
-	$(TUNNEL_COMPOSE) logs -f cloudflared
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel logs -f cloudflared

@@ -13,6 +13,14 @@
 #   - sets AUTH_URL on web, for the same reason: trustHost's per-request Host
 #     header inference (fine on localhost) is not reliable behind the tunnel
 #
+# The third public hostname (cip-preview-neo4j.sploosh.ai -> neo4j:7474, the
+# graph browser's own admin console) needs no service overrides here — it has
+# its own login, unrelated to Keycloak. It's configured entirely on the
+# Cloudflare side (see docs/cloudflare/tunnel-setup.md). NEO4J_PASSWORD in
+# .env must be a real value before that route is safe to leave up — the
+# compose default (see docker-compose.yml) is a well-known local-dev
+# placeholder, fine on localhost, not fine on the public internet.
+#
 # Requires TUNNEL_TOKEN in .env — see docs/runbook.md, "Preview (Cloudflare
 # Tunnel)" for how to create the tunnel in the Cloudflare dashboard and get one.
 #

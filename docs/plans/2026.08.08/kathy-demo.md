@@ -45,16 +45,23 @@ cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
 
 # 1. Clean slate — wipe volumes/images so nothing stale from a prior run can
 #    hide a real bug. Costs nothing right now: no data has been ingested yet.
+#    Also picks up the rotated NEO4J_PASSWORD (it's baked into the volume at
+#    first init, same as the Keycloak realm — a plain `make up` would keep
+#    whatever password was already in the old volume).
 make clean
 make up-web
 ```
 Wait for `✓ Ready in ...` in the terminal, then:
 ```bash
 open -a Safari "http://localhost:3000"
+open -a Safari "http://localhost:7474"
 ```
-Sign in as `demo-analyst` / `demo`, confirm **"Signed in as Demo Analyst,"**
-sign out, confirm it lands back on the sign-in screen. This is a real login on
-a genuinely clean instance, not a warm cache.
+On the app tab: sign in as `demo-analyst` / `demo`, confirm
+**"Signed in as Demo Analyst,"** sign out, confirm it lands back on the
+sign-in screen. This is a real login on a genuinely clean instance, not a
+warm cache. On the Neo4j tab: confirm the connect screen loads and signs in
+with `neo4j` / the password in `.env` (not `devpassword` — that only works
+against a stale, un-cleaned volume).
 
 ```bash
 # 2. Bring the tunnel up on top of the same running stack
@@ -63,13 +70,18 @@ make up-tunnel
 Wait for `Registered tunnel connection` in `make logs-tunnel`, then:
 ```bash
 open -a Safari "https://cip-preview-web.sploosh.ai"
+open -a Safari "https://cip-preview-neo4j.sploosh.ai"
 ```
-Same check, over the public URL: sign in as `demo-analyst` / `demo`, confirm
-the session shows, sign out, confirm it lands back on
-`cip-preview-web.sploosh.ai` — **not** localhost.
+Same checks, over the public URLs: sign in as `demo-analyst` / `demo` on the
+app, confirm the session shows, sign out, confirm it lands back on
+`cip-preview-web.sploosh.ai` — **not** localhost. On the Neo4j tab, confirm
+the connect screen loads — this route has its own separate login, unrelated
+to Keycloak; don't expect a "signed in" state to carry over from the app tab.
 
 ```bash
-# 3. Spin the tunnel back down — web/api/etc keep running
+# 3. Spin the tunnel back down — this reverts web/keycloak to local-only
+#    config too, not just removing the cloudflared container (see the
+#    down-tunnel gotcha in docs/runbook.md if this ever seems to not work)
 make down-tunnel
 ```
 
@@ -78,8 +90,9 @@ make down-tunnel
 #    Expect HTTP 530 / "error code: 1033" — Cloudflare's own "tunnel not
 #    connected" error, not a connection failure. DNS still resolves; the
 #    request reaches Cloudflare's edge and gets turned away there.
-curl -sS -o /dev/null -w "web:  HTTP %{http_code}\n"  --max-time 10 https://cip-preview-web.sploosh.ai/
-curl -sS -o /dev/null -w "auth: HTTP %{http_code}\n"  --max-time 10 https://cip-preview-auth.sploosh.ai/realms/platform
+curl -sS -o /dev/null -w "web:   HTTP %{http_code}\n"  --max-time 10 https://cip-preview-web.sploosh.ai/
+curl -sS -o /dev/null -w "auth:  HTTP %{http_code}\n"  --max-time 10 https://cip-preview-auth.sploosh.ai/realms/platform
+curl -sS -o /dev/null -w "neo4j: HTTP %{http_code}\n"  --max-time 10 https://cip-preview-neo4j.sploosh.ai/
 open -a Safari "https://cip-preview-web.sploosh.ai"
 ```
 Safari should show Cloudflare's error page, not the app. Worth actually seeing
@@ -89,10 +102,12 @@ during the meeting, instead of mistaking it for something else.
 ```bash
 # 5. Confirm localhost is completely unaffected by any of the above
 open -a Safari "http://localhost:3000"
+open -a Safari "http://localhost:7474"
 ```
-Sign in one more time. If this still works after steps 2–4, the actual
-guarantee holds: local never depended on the tunnel, at any point in the
-sequence — not "probably fine," proven, right before walking out the door.
+Sign in one more time, on both. If this still works after steps 2–4, the
+actual guarantee holds: local never depended on the tunnel, at any point in
+the sequence — not "probably fine," proven, right before walking out the
+door.
 
 ### 6. Resounding applause and more cash in hand
 

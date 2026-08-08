@@ -63,12 +63,16 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 ## Preview — Cloudflare Tunnel
 
 The Vercel + AuraDB path in the original plan assumed auth stayed thin. It
-didn't — Keycloak is staying (see `docs/plans/plan-2026-08-08-kathy-demo.md`),
+didn't — Keycloak is staying (see `docs/plans/2026.08.08/kathy-demo.md`),
 and Vercel cannot host a stateful, always-on Keycloak + Postgres. A Cloudflare
 Tunnel from the same machine running `make up-web` gets a real HTTPS URL without
-a hosting decision at all — `cip-preview-web.sploosh.ai` and
-`cip-preview-auth.sploosh.ai`, both with valid TLS, no inbound ports, no server
-to rent.
+a hosting decision at all — `cip-preview-web.sploosh.ai`,
+`cip-preview-auth.sploosh.ai`, and `cip-preview-neo4j.sploosh.ai`, all with
+valid TLS, no inbound ports, no server to rent. The Neo4j route is the graph
+browser's own admin console, not part of the demo — see the security note in
+`docs/cloudflare/tunnel-setup.md` before treating it as casually shareable;
+`NEO4J_PASSWORD` needs to be a real value, not the local-dev default, before
+this route is actually safe.
 
 This is strictly additive: `infra/docker-compose.tunnel.yml` layers on top of
 `infra/docker-compose.yml` and is never merged into it, so `make up` / `make
@@ -112,12 +116,29 @@ checked from two browser tabs:
 2. Visit `https://cip-preview-web.sploosh.ai` in a browser, sign in with a real
    Keycloak account (e.g. `demo-analyst` / `demo`), confirm the session shows,
    sign out, confirm it lands back on `cip-preview-web.sploosh.ai` (not
-   localhost)
-3. `make down-tunnel` (or stop the whole stack), then bring up a plain
-   `make up-web` — no `-tunnel.yml` involved at all — and sign in again on
-   `http://localhost:3000` from a fresh tab. This is the actual local-fallback
-   guarantee; visiting `localhost:3000` *while the tunnel stack is still
-   running* is not the same test and will not pass — see the gotcha below.
+   localhost). Optionally also visit `https://cip-preview-neo4j.sploosh.ai` to
+   confirm the graph browser's login screen loads (see the security note
+   above before treating this as more than a login-screen check).
+3. `make down-tunnel` — this stops `cloudflared` **and** recreates `web` /
+   `keycloak` against the base compose file, so it genuinely reverts to
+   local-only config, not just "the tunnel container is gone." Two bugs
+   surfaced writing this target, both confirmed fixed by actually running it,
+   not by reading it:
+   - The original version only removed `cloudflared` and left `web` /
+     `keycloak` running with the tunnel's `AUTH_URL` / `KC_HOSTNAME` still
+     baked in — confirmed by `docker exec cip-web printenv AUTH_URL` still
+     showing the public URL afterward. The page loaded; real login stayed
+     broken.
+   - Fixing that (adding the `--force-recreate web keycloak` step) still
+     failed with `no such service: web` on the very first line, in a
+     completely clean run with nothing else going on — not a one-off race.
+     `cloudflared` depends on `web`, which is profile-gated
+     (`profiles: ["web"]`); the `stop`/`rm`/`logs` commands never passed
+     `--profile web --profile tunnel`, so compose couldn't resolve the
+     dependency graph. Fixed by adding the profile flags to all three.
+
+   Sign in again on `http://localhost:3000` from a fresh tab to confirm the
+   revert actually took — confirmed working end to end as of this writing.
 
 **Gotcha, found by testing, not by reading the compose file:** once `AUTH_URL`
 is set (see below), Auth.js issues `Secure`-flagged cookies, which browsers
@@ -137,6 +158,6 @@ in `infra/docker-compose.tunnel.yml`, depending on the error:
 
 Never in the base `docker-compose.yml`.
 
-See `docs/plans/plan-2026-08-08-kathy-demo.md` for the full design rationale,
+See `docs/plans/2026.08.08/kathy-demo.md` for the full design rationale,
 including why the first read of the repo concluded `KC_HOSTNAME` wasn't needed
 — and why that conclusion turned out to be wrong once actually tested.

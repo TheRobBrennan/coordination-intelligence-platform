@@ -75,7 +75,7 @@ a public Slack channel, not in a GitHub issue or commit. The project's `.env`
 file is already configured to never be committed to git (`.gitignore`
 excludes it), so pasting it there directly is safe.
 
-## Step 3 — Add the two public hostnames
+## Step 3 — Add the three public hostnames
 
 Do this from the tunnel's own page — not the page from Step 1, which won't
 let you proceed without a live connection.
@@ -107,17 +107,39 @@ let you proceed without a live connection.
    | Path | leave blank |
    | Service URL | `http://keycloak:8080` |
 
-**Important — use `web:3000` and `keycloak:8080` as the Service URL, not
-`localhost`.** These are the names of the project's own internal Docker
-containers, and the tunnel connects to them from inside that same network —
-`localhost` would point at the tunnel software itself, not the application.
+7. Click **+ Add route** once more for the third:
+
+   | Field | Value |
+   |---|---|
+   | Subdomain | `cip-preview-neo4j` |
+   | Domain | `sploosh.ai` |
+   | Path | leave blank |
+   | Service URL | `http://neo4j:7474` |
+
+   This one is the graph database's own admin browser, not the demo app —
+   see the security note below before adding it.
+
+**Important — use `web:3000`, `keycloak:8080`, and `neo4j:7474` as the
+Service URL, not `localhost`.** These are the names of the project's own
+internal Docker containers, and the tunnel connects to them from inside that
+same network — `localhost` would point at the tunnel software itself, not the
+application.
+
+**Security note on the Neo4j route specifically:** unlike the other two, this
+one isn't protected by Keycloak at all — Neo4j has its own separate login
+(username `neo4j`, a password set in the project's `.env`). Before this route
+is live and useful, confirm with the engineer that `NEO4J_PASSWORD` has been
+changed from the local-dev default — the default is a well-known placeholder
+documented in the project's own README, not something safe to leave reachable
+from the public internet.
 
 ## You're done
 
 At this point:
 - The tunnel exists, named `cip-preview`
-- Two routes exist under its **Routes** tab: `cip-preview-web.sploosh.ai` →
-  `http://web:3000` and `cip-preview-auth.sploosh.ai` → `http://keycloak:8080`
+- Three routes exist under its **Routes** tab: `cip-preview-web.sploosh.ai` →
+  `http://web:3000`, `cip-preview-auth.sploosh.ai` → `http://keycloak:8080`,
+  and `cip-preview-neo4j.sploosh.ai` → `http://neo4j:7474`
 - You've handed off (or entered) the `TUNNEL_TOKEN`
 
 The tunnel's **Overview** tab will show status **"Inactive"** until an
@@ -134,7 +156,7 @@ application.
   without touching the routes you already configured. Give the engineer the
   new token — they'll update `.env`. (Deleting and recreating the whole
   tunnel also works, but it throws away the routes too, so prefer rotating.)
-- **Need a third hostname later** (e.g. exposing the API directly): repeat
+- **Need another hostname later** (e.g. exposing the API directly): repeat
   Step 3 with a new subdomain, pointing at the relevant container name and
   port. Ask the engineer what that should be — don't guess at the internal
   service name.
