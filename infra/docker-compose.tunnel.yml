@@ -1,0 +1,36 @@
+# Cloudflare Tunnel preview — strictly additive. Layer this ON TOP of
+# docker-compose.yml with an extra -f flag (see the make targets below); never
+# merge its settings into the base file. `make up-web` with no -f flag must
+# always stay the localhost-only, tunnel-untouched path.
+#
+# What this changes:
+#   - adds the cloudflared service (profile "tunnel", so it never auto-starts)
+#   - overrides the web service's KEYCLOAK_ISSUER and POST_LOGOUT_REDIRECT_URI
+#     to the public tunnel hostnames, so login/logout redirects match whichever
+#     origin the visitor is actually on
+#
+# Requires TUNNEL_TOKEN in .env — see docs/runbook.md, "Preview (Cloudflare
+# Tunnel)" for how to create the tunnel in the Cloudflare dashboard and get one.
+#
+# Usage:
+#   make up-tunnel     # docker compose -f docker-compose.yml -f docker-compose.tunnel.yml --profile web --profile tunnel up
+#   make down-tunnel    # tear down just the tunnel; the app keeps running
+
+services:
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    container_name: cip-cloudflared
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env — see docs/runbook.md}
+    depends_on:
+      - web
+
+  web:
+    environment:
+      # Public hostnames the tunnel exposes (cip-preview-web -> :3000,
+      # cip-preview-auth -> :8080) — must be reachable from the *visitor's*
+      # browser, which is why this differs from the base file's localhost
+      # value. KEYCLOAK_INTERNAL_ISSUER is untouched: it's container-to-
+      # container traffic and never leaves the Docker network either way.
+      KEYCLOAK_ISSUER: https://cip-preview-auth.sploosh.ai/realms/platform
+      POST_LOGOUT_REDIRECT_URI: https://cip-preview-web.sploosh.ai

@@ -10,8 +10,13 @@
 # KEYCLOAK_CLIENT_SECRET, AUTH_SECRET, ...) in favor of in-file fallback defaults.
 COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 
+# Layers infra/docker-compose.tunnel.yml on top — strictly additive (see that
+# file's header comment). COMPOSE / the plain `up`/`up-web` targets above never
+# use this, so they stay the localhost-only, tunnel-untouched path unconditionally.
+TUNNEL_COMPOSE := docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env
+
 .DEFAULT_GOAL := help
-.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed
+.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed up-tunnel down-tunnel logs-tunnel
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -55,3 +60,13 @@ test-web:  ## Run all web tests: vitest unit + Playwright e2e (needs `make up-we
 
 test-web-headed:  ## Same as test-web, but Playwright runs headed and slowed down (PLAYWRIGHT_SLOW_MO=500ms) so you can actually watch it
 	PLAYWRIGHT_SLOW_MO=500 $(MAKE) test-web ARGS=--headed
+
+up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview at cip-preview-web/auth.sploosh.ai (needs TUNNEL_TOKEN in .env — see docs/runbook.md)
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel up --build
+
+down-tunnel:  ## Stop and remove just the tunnel container — web/api/etc keep running, base stack untouched
+	$(TUNNEL_COMPOSE) stop cloudflared
+	$(TUNNEL_COMPOSE) rm -f cloudflared
+
+logs-tunnel:  ## Tail the tunnel container's logs (connection status, routed requests)
+	$(TUNNEL_COMPOSE) logs -f cloudflared

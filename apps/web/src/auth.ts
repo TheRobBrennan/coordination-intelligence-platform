@@ -56,7 +56,11 @@ export async function signOut() {
   const session = await auth();
   await signOutLocally({ redirect: false });
 
-  const params = new URLSearchParams({ post_logout_redirect_uri: "http://localhost:3000" });
+  // Defaults to localhost; the tunnel override (infra/docker-compose.tunnel.yml)
+  // sets this to the public web hostname so logout lands back on the same
+  // origin the user actually signed in from.
+  const postLogoutRedirectUri = process.env.POST_LOGOUT_REDIRECT_URI ?? "http://localhost:3000";
+  const params = new URLSearchParams({ post_logout_redirect_uri: postLogoutRedirectUri });
   if (session?.idToken) params.set("id_token_hint", session.idToken);
 
   redirect(`${PUBLIC_ISSUER}/protocol/openid-connect/logout?${params}`);

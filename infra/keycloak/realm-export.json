@@ -20,13 +20,17 @@
       "standardFlowEnabled": true,
       "redirectUris": [
         "http://localhost:3000/*",
-        "https://*.vercel.app/*"
+        "https://*.vercel.app/*",
+        "https://cip-preview-web.sploosh.ai/*"
       ],
       "webOrigins": ["http://localhost:3000", "+"],
       "secret": "REPLACE_ME_IN_ENV",
-      "attributes": { "post.logout.redirect.uris": "http://localhost:3000/*" }
+      "attributes": { "post.logout.redirect.uris": "+" }
     }
   ],
+  "eventsEnabled": true,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
   "users": [
     {
       "username": "demo-admin",

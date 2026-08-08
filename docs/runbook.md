@@ -66,15 +66,59 @@ The Vercel + AuraDB path in the original plan assumed auth stayed thin. It
 didn't — Keycloak is staying (see `docs/plans/plan-2026-08-08-kathy-demo.md`),
 and Vercel cannot host a stateful, always-on Keycloak + Postgres. A Cloudflare
 Tunnel from the same machine running `make up-web` gets a real HTTPS URL without
-a hosting decision at all:
+a hosting decision at all — `cip-preview-web.sploosh.ai` and
+`cip-preview-auth.sploosh.ai`, both with valid TLS, no inbound ports, no server
+to rent.
+
+This is strictly additive: `infra/docker-compose.tunnel.yml` layers on top of
+`infra/docker-compose.yml` and is never merged into it, so `make up` / `make
+up-web` (no `-tunnel`) stay the localhost-only path, unconditionally, whether
+or not the tunnel has ever been run.
+
+### One-time setup — create the tunnel (Cloudflare account action, do this once)
+
+This is a Cloudflare-dashboard action, not a code or terminal step, and it
+needs the login for the account that manages `sploosh.ai` — not necessarily an
+engineer's task. **See
+[`docs/cloudflare/tunnel-setup.md`](cloudflare/tunnel-setup.md) for the full
+walkthrough**, written for whoever holds those credentials, assuming zero
+context about this repo. It produces one thing you need here: a `TUNNEL_TOKEN`
+in `.env`.
+
+Once that token is in place, import the realm changes already in this branch
+(`redirectUris` + `post.logout.redirect.uris` for the tunnel hostname, plus
+Keycloak's built-in Events) by running `make clean && make up` once —
+`--import-realm` only re-imports on a fresh volume, so a plain `make up` will
+silently skip an already-initialized realm. This only needs repeating if
+`infra/keycloak/realm-export.json` changes again later.
+
+### Every time after that
 
 ```bash
-make up-tunnel     # everything make up-web gives you, plus the public preview
-make down-tunnel   # tear down just the tunnel; the app keeps running
+make up-tunnel      # everything make up-web gives you, plus the tunnel
+make down-tunnel    # stop and remove just the tunnel container — the app keeps running
+make logs-tunnel     # tail the tunnel's connection status
 ```
 
-This is strictly additive — it never modifies `infra/docker-compose.yml`, so
-`make up-web` alone stays localhost-only and unaffected regardless of whether
-the tunnel has ever been run. See the plan doc for the full design (why
-`KEYCLOAK_ISSUER` and not `KC_HOSTNAME` is the actual coupling point, and why
-the fix lives in a compose override rather than a shared `.env` edit).
+### Verifying it actually works
+
+1. `make up-tunnel`, wait for `cloudflared` to report a healthy connection in
+   `make logs-tunnel`
+2. Visit `https://cip-preview-web.sploosh.ai` in a browser, sign in with a real
+   Keycloak account (e.g. `demo-analyst` / `demo`), confirm the session shows,
+   sign out, confirm it lands back on `cip-preview-web.sploosh.ai` (not
+   localhost)
+3. In a **separate terminal**, confirm `make up-web` (no tunnel) still signs in
+   cleanly on `http://localhost:3000` — this is the guarantee that step 2 never
+   put localhost at risk
+4. `make down-tunnel`, confirm the web/api/neo4j/keycloak containers are still
+   running (`make ps`) and `localhost:3000` still works
+
+If step 2 fails partway (e.g. login redirects to the wrong host), the fix lives
+in `infra/docker-compose.tunnel.yml`'s `web.environment` block
+(`KEYCLOAK_ISSUER` / `POST_LOGOUT_REDIRECT_URI`) or in the realm's
+`redirectUris` — never in the base `docker-compose.yml`.
+
+See `docs/plans/plan-2026-08-08-kathy-demo.md` for the full design rationale —
+why `KEYCLOAK_ISSUER` and not `KC_HOSTNAME` is the actual coupling point, and
+why the fix is a compose override rather than a shared `.env` edit.

@@ -201,11 +201,14 @@ app authenticated, sign out — *and*, in a separate terminal, confirm
 `make up-web` (no override) still signs in cleanly on `localhost:3000`. If both
 don't hold within the time box, stop the override, confirm localhost still works
 (it should, untouched), and move on to step 1. **Plus, written and verified
-before this step counts as done:** a real guide in `docs/runbook.md` covering
-the two commands (`make up-tunnel` / `down-tunnel`), the two hostnames, and what
-to do if it breaks (base compose is untouched — just stop the override) —
-proven by tearing the tunnel down and bringing it back up using only what the
-guide says, not what's still in your head from building it.
+before this step counts as done — two guides, split by audience:**
+`docs/cloudflare/tunnel-setup.md` for whoever holds the Cloudflare login
+(zero assumed context about this repo — dashboard clicks, exact values, where
+the resulting token goes), and `docs/runbook.md`'s "Preview" section for the
+engineer running the project day to day (the two `make` commands, the two
+hostnames, what to do if it breaks). Proven by tearing the tunnel down and
+bringing it back up using only what the guides say, not what's still in your
+head from building it.
 
 ## Tonight's critical path
 
