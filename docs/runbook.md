@@ -38,9 +38,15 @@ run is wanted there too.)
 ```bash
 cd ingestion
 uv run playwright install chromium       # one-time
-uv run python -m cip_ingest.run --seed seed/organizations.json   # (run.py = day 3-4)
+uv run python -m cip_ingest.run                      # every org in the seed list
+uv run python -m cip_ingest.run --only "Lumen Technologies" --dry-run   # scrape+extract, write nothing
+uv run python -m cip_ingest.run --limit 3             # first N orgs — the ladder, not all 26 at once
 ```
-Re-runs are idempotent (MERGE) — this doubles as the "refresh agent".
+`--seed PATH` points at a different seed file (default `seed/organizations.json`).
+One org failing (bad URL, DNS, extraction error) never aborts the run — it's
+logged, counted, and the run continues; `needs_validation` orgs are expected
+to fail until their URL is confirmed. Re-runs are idempotent (MERGE) — this
+doubles as the "refresh agent".
 
 **No API key?** Pick a no-key extraction mode in `.env` (see the table in the
 README): `LLM_PROVIDER=claude_cli` uses the Claude Code CLI on your subscription
@@ -55,10 +61,33 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 (`:3000`) — both with hot reload. No separate serve step.
 
 ## 5. Demo flow (analyst walkthrough)
-1. Search a topic (e.g. "supply chain resilience") → list of orgs across sectors.
-2. Click an org → its topics + the **source evidence** + confidence per edge.
-3. Graph view → see cross-sector overlap; highlight two orgs on the same topic
-   with no direct connection = "unconnected parallel efforts" (stretch).
+1. Sign in (`demo-analyst` / `demo`). Type a topic (or click a suggested
+   chip, e.g. "Supply chain resilience") → orgs grouped by sector, each with
+   confidence and a verbatim evidence quote from their real site + a link to
+   the source.
+2. The bipartite graph under the results — click any topic or org pill to
+   highlight just its connections; click a connecting line itself to
+   highlight one specific edge; click empty space to clear.
+3. **"Behind the scenes"** (top-right link, `/pipeline`) — the operational
+   view of the whole thing:
+   - Live counts (orgs/topics/connections) straight from Neo4j
+   - The architecture split into a **backend** zone (offline ingestion:
+     seed list → scraper → extractor → Neo4j) and a **frontend** zone
+     (always-on, read-only: Neo4j → API → this web app), with a small
+     animated dot showing data flow direction on each side
+   - The same full-graph visualization as the search page, but showing
+     everything currently loaded, not just one query's results
+   - **Live admin controls**, all real (not staged): "Reset to clean demo
+     set" and "Clean to empty" wipe/reload the graph; "Run selected" /
+     "Run all cached" re-run extraction for chosen orgs. These replay
+     cached HTML snapshots (`ingestion/seed/fixtures/`) rather than a live
+     scrape, so they stay fast and don't depend on wifi at the table — see
+     `apps/api/app/admin.py` for the `/admin/*` routes behind them.
+   - The seed list shows every org's real status — loaded, cached-but-not-
+     loaded, or a specific reason it isn't ready (no URL on file, a DNS
+     failure from the last real fetch attempt, etc.) — sourced from an
+     actual ingestion attempt (`ingestion/seed/fetch-log.json`), not a
+     generic placeholder.
 
 ## Preview — Cloudflare Tunnel
 
