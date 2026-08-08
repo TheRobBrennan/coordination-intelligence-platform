@@ -134,6 +134,7 @@ export default function GraphViz({
         )}
       </div>
       <svg
+        data-testid="graph-svg"
         viewBox={`0 0 ${width} ${height}`}
         className="h-auto w-full"
         onClick={(e) => {
@@ -157,7 +158,7 @@ export default function GraphViz({
               <g key={i} onClick={() => toggle(edgeId(e))} className="cursor-pointer">
                 {/* Invisible fat hit-area — the visible line below is only
                     1-2px, too thin to reliably click on its own. */}
-                <path d={d} stroke="transparent" strokeWidth={14} fill="none" />
+                <path data-testid="edge-hit-area" d={d} stroke="transparent" strokeWidth={14} fill="none" />
                 <path
                   d={d}
                   stroke={active ? HIGHLIGHT_COLOR : "currentColor"}

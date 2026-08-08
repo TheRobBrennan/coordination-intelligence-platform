@@ -165,7 +165,6 @@ curl -sS -o /dev/null --max-time 15 "$AUTH_TUNNEL/realms/platform" || true
 sleep 2
 
 open -a Safari "$WEB_TUNNEL"
-open -a Safari "$NEO4J_TUNNEL"
 verify_login "$WEB_TUNNEL" "the public tunnel"
 verify_neo4j "$NEO4J_TUNNEL" "the public tunnel"
 pause
