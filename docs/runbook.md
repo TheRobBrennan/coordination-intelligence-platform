@@ -106,6 +106,21 @@ make logs-tunnel     # tail the tunnel's connection status
 
 ### Verifying it actually works
 
+**Fastest path: `./scripts/preflight-check.sh`** (`--no-pause` to run
+unattended). It does everything below automatically — clean slate, local
+login proven via `apps/web/e2e/login.spec.ts` (real assertions, not a
+page-load check), tunnel up, tunnel login proven, tunnel down, tunnel URLs
+proven actually gone, local proven again — and leaves the stack running
+local-only when it finishes. Confirmed with a genuinely clean, passing run;
+see `docs/plans/2026.08.08/kathy-demo.md` for what it caught along the way
+(cold-start latency on the tunnel's first hit, `make clean` never reaching
+the tunnel's `cloudflared` container, Keycloak's readiness not waited for
+after `down-tunnel`) if any of those ever regress.
+
+**The manual sequence below** is what the script automates — useful if the
+script itself is ever in question, or you're doing this by hand for some
+other reason.
+
 **The tunnel-enabled stack and the plain local stack cannot run at the same
 time** — `web` binds host port 3000 in both. Verifying "the tunnel works" and
 verifying "local still works, untouched" are two separate runs, not one run

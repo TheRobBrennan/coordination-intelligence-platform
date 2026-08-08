@@ -14,24 +14,29 @@ is *why*; this is *what to actually do*.
 
 ### Before you leave
 
+Run the full pre-flight script (below) — it proves both paths, cleans up
+after itself, and leaves the stack running local-only, so this *is* the
+"before you leave" check, not a separate lighter-weight one:
+
 ```bash
 cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
-git status                # confirm you're not mid-edit on the wrong branch
+./scripts/preflight-check.sh --no-pause
 ```
 
-Pick **one** — they cannot run at the same time (`web` binds port 3000 in
-both):
+If there's no time for the full run, at minimum bring the stack up and sign
+in once before walking out the door — don't find out it's broken at the
+table:
 
 ```bash
-make up-web       # local only — no wifi dependency, the safe default
+git status        # confirm you're not mid-edit on the wrong branch
+make up-web        # local only — no wifi dependency, the safe default
 # — or —
-make up-tunnel    # adds the public URL — needs TUNNEL_TOKEN in .env already set
+make up-tunnel     # adds the public URL — needs TUNNEL_TOKEN in .env already set
 ```
 
-Then, before walking out the door, sign in once as `demo-analyst` / `demo` at
-whichever URL you chose (`http://localhost:3000` or
-`https://cip-preview-web.sploosh.ai`) and confirm it actually works. Don't
-find out it's broken at the table.
+They cannot run at the same time (`web` binds port 3000 in both). Sign in as
+`demo-analyst` / `demo` at whichever URL you chose (`http://localhost:3000`
+or `https://cip-preview-web.sploosh.ai`) and confirm it actually works.
 
 ### Full pre-flight verification (clean slate, both paths, proven not assumed)
 
@@ -39,6 +44,33 @@ Run this the morning of, or any time you want to re-prove the whole story
 instead of trusting memory. It's the same sequence used to find and fix the
 `KC_HOSTNAME` / `AUTH_URL` bugs below — clean slate, both paths tested, the
 negative case checked too, not just the happy path.
+
+**The fast way — run the script:**
+
+```bash
+cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
+./scripts/preflight-check.sh              # pauses between stages so you can watch each one
+./scripts/preflight-check.sh --no-pause   # runs straight through, unattended
+```
+
+This runs every step below automatically — clean slate, local login proven
+(via `e2e/login.spec.ts`, real Playwright assertions, not a page-load check),
+tunnel up, tunnel login proven, tunnel down, tunnel URLs proven actually
+gone, local proven again — and leaves the stack running local-only when it's
+done, ready to walk into the meeting. `open -a Safari` still fires at each
+step so you see it happening, not just a pass/fail line.
+
+**Confirmed with a genuinely clean run, not assumed:** four real bugs (cold
+tunnel-route latency on the first hit, `make clean` never reaching the
+tunnel's `cloudflared` container, Keycloak's own readiness never waited for
+after `down-tunnel`, and a hardcoded `localhost` in `login.spec.ts` itself)
+were each found by this script actually failing, then fixed, then re-run
+until it passed 6/6 for real. See the commit history on
+`2026.08.08/cloudflare-tunnel-preview` for the blow-by-blow if any of these
+regress.
+
+**The manual way — same sequence, one command at a time** (useful if the
+script itself is ever in question, or you want to narrate each step out loud):
 
 ```bash
 cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
