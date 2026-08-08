@@ -151,6 +151,7 @@ share exported from a Docker host / VM. See
 | `make check` | Report the active LLM mode and whether it's usable (key / subscription). |
 | `make test` / `make test-ingest` | Run the API / ingestion test suites in-container. |
 | `make test-web` | Run all web tests — vitest unit + Playwright e2e. Needs `make up-web` already running; runs via host pnpm, not containerized. |
+| `make test-web-headed` | Same as `test-web`, but headed + slowed down (`PLAYWRIGHT_SLOW_MO=500ms`) so you can actually watch the browser. |
 | `make logs` / `make ps` | Tail logs / list running services. |
 
 > No `make`? It ships with macOS (Xcode command-line tools). Or run the raw

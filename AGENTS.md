@@ -62,6 +62,8 @@ make test-ingest   # ingestion test suite, in-container
 make test-web      # ALL web tests: vitest unit + Playwright e2e — needs `make up-web`
                    # already running first; runs via host pnpm, not containerized
                    # (Playwright drives a real browser through Keycloak login)
+make test-web-headed  # same, but headed + slowed down (PLAYWRIGHT_SLOW_MO=500ms)
+                   # so you can actually watch the browser instead of it blinking by
 
 # pnpm wrappers — pnpm start/stop/build/clean just shell out to the make
 # targets above (one source of truth for the docker compose invocation):
