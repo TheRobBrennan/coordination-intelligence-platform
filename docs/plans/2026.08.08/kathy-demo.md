@@ -7,6 +7,219 @@ The single goal of this plan is a working demo tomorrow morning. Everything not
 required for that is listed at the bottom under "After the demo" and is
 deliberately out of scope until Kathy has seen something run.
 
+## Morning-of cheat sheet
+
+Read this section at the table, not the rest of the plan. Everything below it
+is *why*; this is *what to actually do*.
+
+### Before you leave
+
+Run the full pre-flight script (below) — it proves both paths, cleans up
+after itself, and leaves the stack running local-only, so this *is* the
+"before you leave" check, not a separate lighter-weight one:
+
+```bash
+cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
+./scripts/preflight-check.sh --no-pause   # solo check, fast, unattended
+```
+
+Save `--headed` for the table, not this solo run — it's slowed down on
+purpose so a person watching can follow it, which just makes a check you're
+doing alone take longer for no benefit:
+
+```bash
+./scripts/preflight-check.sh --headed     # run this one again, live, with Kathy
+```
+
+If there's no time for the full run, at minimum bring the stack up and sign
+in once before walking out the door — don't find out it's broken at the
+table:
+
+```bash
+git status        # confirm you're not mid-edit on the wrong branch
+make up-web        # local only — no wifi dependency, the safe default
+# — or —
+make up-tunnel     # adds the public URL — needs TUNNEL_TOKEN in .env already set
+```
+
+They cannot run at the same time (`web` binds port 3000 in both). Sign in as
+`demo-analyst` / `demo` at whichever URL you chose (`http://localhost:3000`
+or `https://cip-preview-web.sploosh.ai`) and confirm it actually works.
+
+### Full pre-flight verification (clean slate, both paths, proven not assumed)
+
+Run this the morning of, or any time you want to re-prove the whole story
+instead of trusting memory. It's the same sequence used to find and fix the
+`KC_HOSTNAME` / `AUTH_URL` bugs below — clean slate, both paths tested, the
+negative case checked too, not just the happy path.
+
+**The fast way — run the script:**
+
+```bash
+cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
+./scripts/preflight-check.sh              # pauses between stages so you can watch each one
+./scripts/preflight-check.sh --no-pause   # runs straight through, unattended
+./scripts/preflight-check.sh --headed     # real visible browser windows, slowed
+                                           # down — this is the one to run
+                                           # WITH Kathy, not for yourself
+```
+
+**`--headed` is the one worth running live at the table.** It's the same
+proof as always — sign in, session shows, sign out, lands back on the right
+host — except it happens in an actual visible browser window she can watch,
+slowed down enough to follow (not flashing by in under a second), with a
+pause between each stage so you're narrating, not racing through. This is
+the demo-plan equivalent of "don't just tell her it works, show her it
+working."
+
+This runs every step below automatically — clean slate, local login proven
+(via `e2e/login.spec.ts`, real Playwright assertions, not a page-load check),
+tunnel up, tunnel login proven, tunnel down, tunnel URLs proven actually
+gone, local proven again — and leaves the stack running local-only when it's
+done, ready to walk into the meeting. `open -a Safari` still fires at each
+step so you see it happening, not just a pass/fail line.
+
+**Confirmed with a genuinely clean run, not assumed:** four real bugs (cold
+tunnel-route latency on the first hit, `make clean` never reaching the
+tunnel's `cloudflared` container, Keycloak's own readiness never waited for
+after `down-tunnel`, and a hardcoded `localhost` in `login.spec.ts` itself)
+were each found by this script actually failing, then fixed, then re-run
+until it passed 6/6 for real. See the commit history on
+`2026.08.08/cloudflare-tunnel-preview` for the blow-by-blow if any of these
+regress.
+
+**The manual way — same sequence, one command at a time** (useful if the
+script itself is ever in question, or you want to narrate each step out loud):
+
+```bash
+cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
+
+# 1. Clean slate — wipe volumes/images so nothing stale from a prior run can
+#    hide a real bug. Costs nothing right now: no data has been ingested yet.
+#    Also picks up the rotated NEO4J_PASSWORD (it's baked into the volume at
+#    first init, same as the Keycloak realm — a plain `make up` would keep
+#    whatever password was already in the old volume).
+make clean
+make up-web
+```
+Wait for `✓ Ready in ...` in the terminal, then:
+```bash
+open -a Safari "http://localhost:3000"
+open -a Safari "http://localhost:7474"
+```
+On the app tab: sign in as `demo-analyst` / `demo`, confirm
+**"Signed in as Demo Analyst,"** sign out, confirm it lands back on the
+sign-in screen. This is a real login on a genuinely clean instance, not a
+warm cache. On the Neo4j tab: confirm the connect screen loads and signs in
+with `neo4j` / the password in `.env` (not `devpassword` — that only works
+against a stale, un-cleaned volume).
+
+```bash
+# 2. Bring the tunnel up on top of the same running stack
+make up-tunnel
+```
+Wait for `Registered tunnel connection` in `make logs-tunnel`, then:
+```bash
+open -a Safari "https://cip-preview-web.sploosh.ai"
+open -a Safari "https://cip-preview-neo4j.sploosh.ai"
+```
+Same checks, over the public URLs: sign in as `demo-analyst` / `demo` on the
+app, confirm the session shows, sign out, confirm it lands back on
+`cip-preview-web.sploosh.ai` — **not** localhost. On the Neo4j tab, confirm
+the connect screen loads — this route has its own separate login, unrelated
+to Keycloak; don't expect a "signed in" state to carry over from the app tab.
+
+```bash
+# 3. Spin the tunnel back down — this reverts web/keycloak to local-only
+#    config too, not just removing the cloudflared container (see the
+#    down-tunnel gotcha in docs/runbook.md if this ever seems to not work)
+make down-tunnel
+```
+
+```bash
+# 4. Prove the tunnel URLs are actually gone, not just "probably down."
+#    Expect HTTP 530 / "error code: 1033" — Cloudflare's own "tunnel not
+#    connected" error, not a connection failure. DNS still resolves; the
+#    request reaches Cloudflare's edge and gets turned away there.
+curl -sS -o /dev/null -w "web:   HTTP %{http_code}\n"  --max-time 10 https://cip-preview-web.sploosh.ai/
+curl -sS -o /dev/null -w "auth:  HTTP %{http_code}\n"  --max-time 10 https://cip-preview-auth.sploosh.ai/realms/platform
+curl -sS -o /dev/null -w "neo4j: HTTP %{http_code}\n"  --max-time 10 https://cip-preview-neo4j.sploosh.ai/
+open -a Safari "https://cip-preview-web.sploosh.ai"
+```
+Safari should show Cloudflare's error page, not the app. Worth actually seeing
+this once — it's the exact signature to recognize if the tunnel drops for real
+during the meeting, instead of mistaking it for something else.
+
+```bash
+# 5. Confirm localhost is completely unaffected by any of the above
+open -a Safari "http://localhost:3000"
+open -a Safari "http://localhost:7474"
+```
+Sign in one more time, on both. If this still works after steps 2–4, the
+actual guarantee holds: local never depended on the tunnel, at any point in
+the sequence — not "probably fine," proven, right before walking out the
+door.
+
+### 6. Resounding applause and more cash in hand
+
+Not a `make` target. No test covers this one. Bring your own charm.
+
+### What you're actually demoing
+
+This depends on whether steps 1–2 below got finished tonight — check honestly,
+don't assume:
+
+- **If ingestion (step 1) and the search UI (step 2) are done:** demo the real
+  loop — type a topic, see orgs with evidence. This is the thing that proves
+  the PRD's core claim. Walk it live rather than describing it.
+- **If they aren't done:** demo the architecture instead, and say so plainly.
+  Sign in, show the Swagger docs at `:8000/docs`, walk through *why* it's
+  built this way (offline ingestion vs. always-on read app, swappable LLM
+  adapters, swappable auth) and what's left. Kathy is a working partner on
+  this, not a customer to perform for — "here's the engine, here's the plan
+  to finish it" is a legitimate thing to show a person you're building with.
+
+Either way, **do not overstate what's running.** If the graph is empty, don't
+imply it isn't.
+
+### Talking points, in order
+
+1. **The thesis** (verbatim, it's the one sentence that matters): *"Type a
+   topic, instantly see which organizations across sectors are working on
+   it — with the evidence to back it up."*
+2. **What's built vs. what's proof-of-concept** — full Docker stack, real
+   Keycloak auth, a working read API, ingestion components all tested
+   individually. The gap is orchestration (`run.py`) and the product UI, not
+   architecture.
+3. **The five open questions** (below) — these are the actual point of
+   today's conversation, not a formality after the demo.
+4. **The August 20th target** — what's realistic between now and then, scoped
+   honestly.
+
+### Open questions for Kathy — ask these, don't just have them on hand
+
+1. Is the ~25-org seed list right, or is there a sharper must-impress subset?
+2. Is OpenAI/Azure a hard requirement, or is the LLM provider ours to pick?
+3. Do CXC stakeholders need to reach a demo themselves before the 20th, or is
+   a screen-share enough? — this alone decides whether the tunnel work
+   tonight was worth finishing
+4. Is anything non-public expected in the ingest, or public sources only?
+5. What does "done" mean for the $1,200 — the PoC itself, or a stepping stone
+   to a larger engagement?
+
+### If something breaks at the table
+
+- **Tunnel URL won't load / wrong page:** switch to `make up-web` and
+  `http://localhost:3000` — that's the whole point of keeping it as the
+  primary path. No apology needed, just switch.
+- **Login fails on the tunnel specifically:** don't debug live. Kill it
+  (`make down-tunnel`), fall back to localhost, mention it's a known rough
+  edge on the public URL, keep going.
+- **A container looks wedged:** `make down` then `make up-web` — a full
+  restart is faster than diagnosing at the table.
+- **Genuinely stuck:** the architecture talking points above don't need the
+  app running at all. Worst case, this is still a real conversation.
+
 ## The one thing this demo has to do
 
 From the June kickoff review, unchanged and still correct:
@@ -149,35 +362,69 @@ no inbound ports, no public IP, no hosting cost.
 | `cip-preview-web.sploosh.ai` | → | `localhost:3000` (Next.js) |
 | `cip-preview-auth.sploosh.ai` | → | `localhost:8080` (Keycloak) |
 
-**Corrected understanding (checked against the actual repo, not assumed):**
-`infra/docker-compose.yml` never sets a fixed `KC_HOSTNAME` today, so Keycloak
-already runs in a request-adaptive mode — it is not the coupling point. The real
-coupling is two things in `apps/web/src/auth.ts`:
+**Understanding, revised twice — first from reading the repo, then corrected
+again by actually running it.** The initial pass (reading `auth.ts`) found two
+coupling points and concluded `KC_HOSTNAME` didn't matter since nothing sets it.
+That was wrong, and only testing a real login over the real tunnel exposed why.
+Four things are involved, not two:
 
-- `PUBLIC_ISSUER = process.env.KEYCLOAK_ISSUER` — one value for the whole running
-  container, sent to every visitor's browser regardless of which hostname they
-  used
-- `post_logout_redirect_uri: "http://localhost:3000"` — a **literal string** in
-  `signOut()`, not even an env var today
+- `PUBLIC_ISSUER = process.env.KEYCLOAK_ISSUER` (`apps/web/src/auth.ts`) — one
+  value for the whole running container, sent to every visitor's browser
+  regardless of which hostname they used
+- `post_logout_redirect_uri` in `signOut()` — was a **literal string**
+  (`http://localhost:3000`), now reads `process.env.POST_LOGOUT_REDIRECT_URI`
+- `KC_HOSTNAME` on the `keycloak` service — **required**, not optional as first
+  assumed. cloudflared terminates TLS at Cloudflare's edge, then talks to
+  Keycloak over plain HTTP inside the Docker network (correct — that hop should
+  stay internal). Without a fixed hostname, Keycloak reports the scheme it
+  actually saw on that internal hop — `http` — in its own `iss` (issuer) claim.
+  Auth.js compares that against the `https` issuer it expected and rejects the
+  login: `OperationProcessingError: unexpected "iss" response parameter value`.
+  A real login attempt failed at the final step even though every redirect up
+  to that point looked correct — the kind of failure that only shows up by
+  actually signing in, not by reading the compose file.
+- `AUTH_URL` on the `web` service — also required, found the same way. The
+  "Sign in with Keycloak" click (a Server Action, POST to the current page) got
+  the right `redirect_uri` because Next.js used the browser's `Origin` header,
+  which the tunnel doesn't touch. The OAuth callback (a plain GET route
+  handler) instead relies on `trustHost`'s Host-header inference, which came
+  back as `localhost:3000` through the tunnel — Keycloak's token exchange then
+  rejected it: *"redirect_uri did not match... Saved:
+  `https://cip-preview-web.sploosh.ai/...`, parameter:
+  `https://localhost:3000/...`"*. `AUTH_URL` is Auth.js v5's documented
+  override for exactly this — an app behind a reverse proxy — and wins over
+  Host-header inference entirely.
 
-So do this as a strictly additive compose override, never an in-place edit of the
-shared config:
+**One more thing only real testing caught:** with `AUTH_URL` fixed to
+`https://...`, Auth.js sets `Secure`-flagged cookies — which browsers refuse to
+store over a plain `http://` connection. So while the tunnel override is
+running, even hitting `localhost:3000` **directly** breaks login
+(`InvalidCheck: pkceCodeVerifier value could not be parsed`), because the
+cookie never gets set. The two modes are not just "different hostname, same
+container" — they are mutually exclusive. Verifying the local fallback for
+real requires stopping the tunnel-enabled stack entirely and bringing up a
+plain `make up-web` in isolation, not just visiting `localhost:3000` while the
+tunnel happens to also be running.
+
+So this lands as a strictly additive compose override, never an in-place edit
+of the shared config:
 
 - `infra/docker-compose.yml` (base) is **not modified**. `make up-web` stays the
   localhost-safe path unconditionally — no discipline required to keep it that
-  way, nothing to remember to revert.
-- New `infra/docker-compose.tunnel.yml` override: adds the `cloudflared` service,
-  and overrides only the `web` service's `KEYCLOAK_ISSUER` and a new
-  `POST_LOGOUT_REDIRECT_URI` env var to the tunnel-facing values.
-- One small code change: `auth.ts`'s hardcoded `post_logout_redirect_uri` becomes
-  `process.env.POST_LOGOUT_REDIRECT_URI ?? "http://localhost:3000"`.
+  way, nothing to remember to revert. But "unconditionally" means *only when the
+  tunnel override isn't also running* — see above.
+- `infra/docker-compose.tunnel.yml` override: adds the `cloudflared` service,
+  and overrides the `web` service's `KEYCLOAK_ISSUER`, `POST_LOGOUT_REDIRECT_URI`,
+  and `AUTH_URL`, plus the `keycloak` service's `KC_HOSTNAME` — to the
+  tunnel-facing values.
 - Realm `redirectUris` in `infra/keycloak/realm-export.json` gets
   `https://cip-preview-web.sploosh.ai/*` **added** alongside the existing
   `http://localhost:3000/*` and `https://*.vercel.app/*` entries — additive, not
   a swap. `webOrigins` already carries a `+` wildcard that mirrors whatever is in
-  `redirectUris`, so CORS is covered for free. Change it live in the admin
-  console for speed, then persist into `realm-export.json` in the PR —
-  `--import-realm` only applies on a fresh volume.
+  `redirectUris`, so CORS is covered for free. `post.logout.redirect.uris` set
+  to `+` for the same reason. Change it live in the admin console for speed,
+  then persist into `realm-export.json` in the PR — `--import-realm` only
+  applies on a fresh volume.
 - **While already in the realm config, turn on Keycloak's built-in Events**
   (realm → Events → enable "Save Events" + "Save Admin Events") — this logs
   logins, logouts, and admin actions with zero code, and it's the kind of
@@ -185,7 +432,7 @@ shared config:
   is a checkbox, not a workstream — if it doesn't take five minutes, skip it and
   move on; it does not extend the time box.
 - Tunnel-on becomes an explicit extra flag, never a state to forget:
-  `docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --profile tunnel up -d`
+  `make up-tunnel` (`docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --profile web --profile tunnel up`)
 
 **Why this is genuinely step 0 and not step 4:** because it is additive, there is
 no destructive `make clean` involved and no data-loss ordering concern — it could
@@ -195,17 +442,30 @@ DNS, redirect-URI correctness), so it deserves first crack at fresh attention
 rather than being rushed at 1am. If it fails, nothing about steps 1–3 is
 affected — the base compose file was never touched.
 
-**Definition of done for this step:** with the override running, sign in via
-`cip-preview-web.sploosh.ai` using an actual Keycloak account, land back on the
-app authenticated, sign out — *and*, in a separate terminal, confirm
-`make up-web` (no override) still signs in cleanly on `localhost:3000`. If both
-don't hold within the time box, stop the override, confirm localhost still works
-(it should, untouched), and move on to step 1. **Plus, written and verified
-before this step counts as done:** a real guide in `docs/runbook.md` covering
-the two commands (`make up-tunnel` / `down-tunnel`), the two hostnames, and what
-to do if it breaks (base compose is untouched — just stop the override) —
-proven by tearing the tunnel down and bringing it back up using only what the
-guide says, not what's still in your head from building it.
+**Definition of done for this step, both legs run and confirmed — not just one
+while assuming the other:**
+
+1. With `make up-tunnel` running, sign in via `cip-preview-web.sploosh.ai` using
+   an actual Keycloak account, land back on the app authenticated, sign out,
+   confirm it lands back on `cip-preview-web.sploosh.ai` (not localhost)
+2. Stop that stack entirely (`web` binds port 3000 in both — they cannot run at
+   the same time), bring up a plain `make up-web` with no tunnel override
+   involved at all, and sign in again on `http://localhost:3000` from a fresh
+   tab. This is the actual guarantee that matters for the in-person demo — not
+   "localhost still responds while the tunnel happens to also be running,"
+   which, as the cookie issue above shows, is a different and broken thing.
+
+If either leg doesn't hold within the time box, stop the override, confirm
+`make up-web` alone still signs in cleanly (it should — the base compose file
+is never touched), and move on to step 1. **Plus, written and verified
+before this step counts as done — two guides, split by audience:**
+`docs/cloudflare/tunnel-setup.md` for whoever holds the Cloudflare login
+(zero assumed context about this repo — dashboard clicks, exact values, where
+the resulting token goes), and `docs/runbook.md`'s "Preview" section for the
+engineer running the project day to day (the two `make` commands, the two
+hostnames, what to do if it breaks). Proven by tearing the tunnel down and
+bringing it back up using only what the guides say, not what's still in your
+head from building it.
 
 ## Tonight's critical path
 

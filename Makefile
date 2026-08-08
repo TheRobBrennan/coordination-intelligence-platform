@@ -10,8 +10,13 @@
 # KEYCLOAK_CLIENT_SECRET, AUTH_SECRET, ...) in favor of in-file fallback defaults.
 COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 
+# Layers infra/docker-compose.tunnel.yml on top — strictly additive (see that
+# file's header comment). COMPOSE / the plain `up`/`up-web` targets above never
+# use this, so they stay the localhost-only, tunnel-untouched path unconditionally.
+TUNNEL_COMPOSE := docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env
+
 .DEFAULT_GOAL := help
-.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed
+.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed up-tunnel down-tunnel logs-tunnel
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -23,15 +28,25 @@ up:  ## Bring the stack up (Neo4j + Keycloak + API), hot reload. Ctrl+C stops.
 up-web:  ## Same as up, plus the Next.js web app (needs apps/web scaffolded)
 	$(COMPOSE) --profile web up --build
 
-down:  ## Stop everything (including the web/ingest profiles, if running)
-	$(COMPOSE) --profile web --profile ingest down
+down:  ## Stop everything (including the web/ingest/tunnel profiles, if running)
+	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down
 
 build:  ## Rebuild all images from scratch (no cache) and recreate containers
 	$(COMPOSE) build --no-cache
 	$(COMPOSE) up -d --force-recreate
 
-clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles)
-	$(COMPOSE) --profile web --profile ingest down -v --rmi local
+# Uses TUNNEL_COMPOSE, not COMPOSE, even though this is meant to be a clean
+# slate for the plain (non-tunnel) path. Found by testing: if a prior session
+# ends abnormally while the tunnel is up (a script's early exit, Ctrl-C), the
+# cloudflared container is defined only in docker-compose.tunnel.yml — a plain
+# COMPOSE-scoped teardown never reaches it, so it keeps running orphaned. The
+# next `make up-tunnel` then sees it already "Running" and never re-emits its
+# startup logs, which looks like a hung/broken tunnel but is actually stale
+# state from a `clean` that wasn't actually clean. TUNNEL_COMPOSE is a strict
+# superset here — it still tears down the base stack correctly when the
+# tunnel was never touched, and additionally catches cloudflared when it was.
+clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles incl. tunnel)
+	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down -v --rmi local
 
 logs:  ## Tail logs from all running services
 	$(COMPOSE) logs -f
@@ -55,3 +70,14 @@ test-web:  ## Run all web tests: vitest unit + Playwright e2e (needs `make up-we
 
 test-web-headed:  ## Same as test-web, but Playwright runs headed and slowed down (PLAYWRIGHT_SLOW_MO=500ms) so you can actually watch it
 	PLAYWRIGHT_SLOW_MO=500 $(MAKE) test-web ARGS=--headed
+
+up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview — three cip-preview-*.sploosh.ai hostnames (web, auth, neo4j); needs TUNNEL_TOKEN in .env — see docs/runbook.md
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel up --build
+
+down-tunnel:  ## Stop the tunnel AND revert web/keycloak to local-only config (they keep running, recreated against the base compose file — not just "cloudflared removed")
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel stop cloudflared
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel rm -f cloudflared
+	$(COMPOSE) --profile web up -d --force-recreate web keycloak
+
+logs-tunnel:  ## Tail the tunnel container's logs (connection status, routed requests)
+	$(TUNNEL_COMPOSE) --profile web --profile tunnel logs -f cloudflared

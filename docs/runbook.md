@@ -63,18 +63,156 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 ## Preview — Cloudflare Tunnel
 
 The Vercel + AuraDB path in the original plan assumed auth stayed thin. It
-didn't — Keycloak is staying (see `docs/plans/plan-2026-08-08-kathy-demo.md`),
+didn't — Keycloak is staying (see `docs/plans/2026.08.08/kathy-demo.md`),
 and Vercel cannot host a stateful, always-on Keycloak + Postgres. A Cloudflare
 Tunnel from the same machine running `make up-web` gets a real HTTPS URL without
-a hosting decision at all:
+a hosting decision at all — `cip-preview-web.sploosh.ai`,
+`cip-preview-auth.sploosh.ai`, and `cip-preview-neo4j.sploosh.ai`, all with
+valid TLS, no inbound ports, no server to rent. The Neo4j route is the graph
+browser's own admin console, not part of the demo — see the security note in
+`docs/cloudflare/tunnel-setup.md` before treating it as casually shareable;
+`NEO4J_PASSWORD` needs to be a real value, not the local-dev default, before
+this route is actually safe.
+
+This is strictly additive: `infra/docker-compose.tunnel.yml` layers on top of
+`infra/docker-compose.yml` and is never merged into it, so `make up` / `make
+up-web` (no `-tunnel`) stay the localhost-only path, unconditionally, whether
+or not the tunnel has ever been run.
+
+### One-time setup — create the tunnel (Cloudflare account action, do this once)
+
+This is a Cloudflare-dashboard action, not a code or terminal step, and it
+needs the login for the account that manages `sploosh.ai` — not necessarily an
+engineer's task. **See
+[`docs/cloudflare/tunnel-setup.md`](cloudflare/tunnel-setup.md) for the full
+walkthrough**, written for whoever holds those credentials, assuming zero
+context about this repo. It produces one thing you need here: a `TUNNEL_TOKEN`
+in `.env`.
+
+Once that token is in place, import the realm changes already in this branch
+(`redirectUris` + `post.logout.redirect.uris` for the tunnel hostname, plus
+Keycloak's built-in Events) by running `make clean && make up` once —
+`--import-realm` only re-imports on a fresh volume, so a plain `make up` will
+silently skip an already-initialized realm. This only needs repeating if
+`infra/keycloak/realm-export.json` changes again later.
+
+### Every time after that
 
 ```bash
-make up-tunnel     # everything make up-web gives you, plus the public preview
-make down-tunnel   # tear down just the tunnel; the app keeps running
+make up-tunnel      # everything make up-web gives you, plus the tunnel
+make down-tunnel    # stop and remove just the tunnel container — the app keeps running
+make logs-tunnel     # tail the tunnel's connection status
 ```
 
-This is strictly additive — it never modifies `infra/docker-compose.yml`, so
-`make up-web` alone stays localhost-only and unaffected regardless of whether
-the tunnel has ever been run. See the plan doc for the full design (why
-`KEYCLOAK_ISSUER` and not `KC_HOSTNAME` is the actual coupling point, and why
-the fix lives in a compose override rather than a shared `.env` edit).
+### Verifying it actually works
+
+**Fastest path: `./scripts/preflight-check.sh`** (`--no-pause` to run
+unattended, `--headed` for a real visible browser window slowed down enough
+to watch with someone rather than trusting a pass/fail log). It does
+everything below automatically — clean slate, local login proven via
+`apps/web/e2e/login.spec.ts` (real assertions, not a page-load check), tunnel
+up, tunnel login proven, tunnel down, tunnel URLs proven actually gone, local
+proven again — and leaves the stack running local-only when it finishes, as
+independent detached containers that survive the script's own process
+exiting (confirmed directly: `docker ps` + a live `curl` well after the
+script completed, not assumed from the exit code). See
+`docs/plans/2026.08.08/kathy-demo.md` for the full list of what it caught
+along the way (cold-start latency on the tunnel's first hit, `make clean`
+never reaching the tunnel's `cloudflared` container, Keycloak's readiness not
+waited for after `down-tunnel`, and the script's own stack-survives-exit bug)
+if any of those ever regress.
+
+**The manual sequence below** is what the script automates — useful if the
+script itself is ever in question, or you're doing this by hand for some
+other reason.
+
+**The tunnel-enabled stack and the plain local stack cannot run at the same
+time** — `web` binds host port 3000 in both. Verifying "the tunnel works" and
+verifying "local still works, untouched" are two separate runs, not one run
+checked from two browser tabs:
+
+1. `make up-tunnel`, wait for `cloudflared` to report a healthy connection in
+   `make logs-tunnel`
+2. Visit `https://cip-preview-web.sploosh.ai` in a browser, sign in with a real
+   Keycloak account (e.g. `demo-analyst` / `demo`), confirm the session shows,
+   sign out, confirm it lands back on `cip-preview-web.sploosh.ai` (not
+   localhost). Optionally also visit `https://cip-preview-neo4j.sploosh.ai` to
+   confirm the graph browser's login screen loads (see the security note
+   above before treating this as more than a login-screen check).
+3. `make down-tunnel` — this stops `cloudflared` **and** recreates `web` /
+   `keycloak` against the base compose file, so it genuinely reverts to
+   local-only config, not just "the tunnel container is gone." Two bugs
+   surfaced writing this target, both confirmed fixed by actually running it,
+   not by reading it:
+   - The original version only removed `cloudflared` and left `web` /
+     `keycloak` running with the tunnel's `AUTH_URL` / `KC_HOSTNAME` still
+     baked in — confirmed by `docker exec cip-web printenv AUTH_URL` still
+     showing the public URL afterward. The page loaded; real login stayed
+     broken.
+   - Fixing that (adding the `--force-recreate web keycloak` step) still
+     failed with `no such service: web` on the very first line, in a
+     completely clean run with nothing else going on — not a one-off race.
+     `cloudflared` depends on `web`, which is profile-gated
+     (`profiles: ["web"]`); the `stop`/`rm`/`logs` commands never passed
+     `--profile web --profile tunnel`, so compose couldn't resolve the
+     dependency graph. Fixed by adding the profile flags to all three.
+
+   Sign in again on `http://localhost:3000` from a fresh tab to confirm the
+   revert actually took — confirmed working end to end as of this writing.
+
+**Gotcha, found by testing, not by reading the compose file:** once `AUTH_URL`
+is set (see below), Auth.js issues `Secure`-flagged cookies, which browsers
+refuse to store over a plain `http://` connection. So while the tunnel-enabled
+stack is up, even hitting `localhost:3000` directly breaks login
+(`InvalidCheck: pkceCodeVerifier value could not be parsed`) — the two modes
+are mutually exclusive, not "same app, different door."
+
+If sign-in over the tunnel fails partway, the fix lives in one of three places
+in `infra/docker-compose.tunnel.yml`, depending on the error:
+
+| Error | Fix location |
+|---|---|
+| `unexpected "iss" response parameter value` | `keycloak.environment.KC_HOSTNAME` — Keycloak is reporting `http` instead of `https` in its own issuer claim |
+| `redirect_uri did not match... parameter: https://localhost:3000/...` | `web.environment.AUTH_URL` — Host-header inference came back wrong through the tunnel |
+| Login redirects to the wrong host generally | `web.environment.KEYCLOAK_ISSUER` / `POST_LOGOUT_REDIRECT_URI`, or the realm's `redirectUris` |
+
+Never in the base `docker-compose.yml`.
+
+See `docs/plans/2026.08.08/kathy-demo.md` for the full design rationale,
+including why the first read of the repo concluded `KC_HOSTNAME` wasn't needed
+— and why that conclusion turned out to be wrong once actually tested.
+
+### Privileged database access (optional — keys to the kingdom)
+
+The `cip-preview-neo4j.sploosh.ai` route above only carries Neo4j Browser's
+*web page*. You can load it and see the connect screen, but signing in from
+there hangs forever — browsers can only speak WebSocket, and Bolt (Neo4j's
+real protocol) isn't WebSocket. That's a hard limitation, not a
+misconfiguration; no tunnel setting fixes it.
+
+Actual database access — unrestricted Cypher, read/write, the equivalent of
+having the database password — needs a fourth route and a native (non-browser)
+Bolt client. Setup lives in `docs/cloudflare/tunnel-setup.md`, "Step 4 — Add a
+fourth route for real database access." Once that route and its Access policy
+exist:
+
+```bash
+cloudflared access tcp --hostname cip-preview-bolt.sploosh.ai --url localhost:17687
+```
+
+Then point any native Bolt client at `bolt://localhost:17687` — confirmed
+working with both a plain Python `neo4j` driver query and a live
+[Neo4j Desktop 2](https://neo4j.com/download/) connection. Neo4j Desktop is a
+genuinely convenient option here: it's a native (Electron main-process) Bolt
+client, not a browser tab, so it isn't subject to the WebSocket limitation
+above. Worth keeping two saved connections side by side once it's set up:
+
+| Connection name | URL | What it actually is |
+|---|---|---|
+| Local (direct) | `bolt://localhost:7687` | Straight to the Docker container, tunnel not involved |
+| Via Cloudflare Tunnel | `bolt://localhost:17687` | Through `cloudflared access tcp` — this is what's actually reaching the tunnel |
+
+This is optional, and deliberately not part of the default setup — most people
+working on this project never need it. Only set it up for whoever actually
+needs to run ad hoc Cypher against the live graph, and keep the Access policy
+scoped to specific people (an email allowlist), not "anyone authenticated."
