@@ -1,4 +1,6 @@
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { signIn } from "@/auth";
 import { getSession } from "@/lib/session";
 import LocalTime from "./LocalTime";
@@ -17,6 +19,7 @@ type SeedOrg = {
   validation_note?: string | null;
   loaded: boolean;
   cached: boolean;
+  issue: string | null;
 };
 
 type Stats = {
@@ -45,6 +48,7 @@ async function resetDemoData() {
   await fetch(`${API_BASE}/admin/reset`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
+  redirect("/pipeline#stats-top");
 }
 
 async function cleanToEmpty() {
@@ -52,6 +56,7 @@ async function cleanToEmpty() {
   await fetch(`${API_BASE}/admin/clean`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
+  redirect("/pipeline#stats-top");
 }
 
 async function runSelected(formData: FormData) {
@@ -65,6 +70,7 @@ async function runSelected(formData: FormData) {
   });
   revalidatePath("/pipeline");
   revalidatePath("/");
+  redirect("/pipeline#stats-top");
 }
 
 async function runAllCached() {
@@ -72,13 +78,14 @@ async function runAllCached() {
   await fetch(`${API_BASE}/admin/ingest`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
+  redirect("/pipeline#stats-top");
 }
 
 // The seed file lives on the server (mounted into the API container) — link
 // straight to the API's raw file route so it opens the real JSON, not a copy.
 const SEED_JSON_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/seed.json`;
 
-const STAGES = [
+const INGESTION_STAGES = [
   {
     emoji: "\u{1F4CB}",
     title: "Seed list",
@@ -106,11 +113,15 @@ const STAGES = [
     title: "Extractor",
     detail: "LLM adapter pulls topics + verbatim evidence (swappable: mock / Claude / OpenAI)",
   },
-  {
-    emoji: "\u{1F578}\u{FE0F}",
-    title: "Neo4j graph",
-    detail: "(Organization)-[WORKS_ON {confidence, evidence}]->(Topic)",
-  },
+];
+
+const NEO4J_STAGE = {
+  emoji: "\u{1F578}\u{FE0F}",
+  title: "Neo4j graph",
+  detail: "(Organization)-[WORKS_ON {confidence, evidence}]->(Topic)",
+};
+
+const WEB_STAGES = [
   {
     emoji: "\u{1F4E1}",
     title: "Read API",
@@ -122,6 +133,32 @@ const STAGES = [
     detail: "This app — Next.js Server Components query the API directly, no client-side fetch",
   },
 ];
+
+function FlowConnector({ delay = 0, reverse = false }: { delay?: number; reverse?: boolean }) {
+  return (
+    <div className="relative h-6 w-10 shrink-0 overflow-hidden">
+      <div className="absolute left-1/2 h-full w-px -translate-x-1/2 bg-zinc-300 dark:bg-zinc-700" />
+      <div
+        className="pipeline-flow-dot absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
+        style={{ animationDelay: `${delay}s`, animationDirection: reverse ? "reverse" : "normal" }}
+      />
+    </div>
+  );
+}
+
+function StageRow({ stage }: { stage: { emoji: string; title: string; detail: ReactNode } }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg dark:border-zinc-700 dark:bg-zinc-900">
+        {stage.emoji}
+      </div>
+      <div>
+        <div className="font-medium text-black dark:text-zinc-50">{stage.title}</div>
+        <div className="text-sm text-zinc-500 dark:text-zinc-400">{stage.detail}</div>
+      </div>
+    </div>
+  );
+}
 
 export default async function Pipeline() {
   const session = await getSession();
@@ -159,12 +196,6 @@ export default async function Pipeline() {
             <a href="/" className="text-sm text-zinc-500 underline dark:text-zinc-400">
               &larr; Search
             </a>
-            <a
-              href="#how-it-works"
-              className="text-sm text-zinc-500 underline dark:text-zinc-400"
-            >
-              How it works
-            </a>
             <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
               Behind the scenes
             </h1>
@@ -177,7 +208,7 @@ export default async function Pipeline() {
         </p>
 
         {/* Live stats */}
-        <div className="flex flex-col gap-3">
+        <div id="stats-top" className="flex scroll-mt-10 flex-col gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Current graph — live from Neo4j
           </h2>
@@ -243,38 +274,49 @@ export default async function Pipeline() {
           </div>
         </div>
 
-        {/* Pipeline stages */}
+        {/* Architecture diagram */}
         <div id="how-it-works" className="flex scroll-mt-10 flex-col gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             How it works
           </h2>
-          <div className="flex flex-col">
-            {STAGES.map((stage, i) => (
-              <div key={stage.title} className="flex flex-col">
-                <div className="flex items-center gap-3">
-                  <div className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    {stage.emoji}
-                  </div>
-                  <div>
-                    <div className="font-medium text-black dark:text-zinc-50">
-                      {stage.title}
-                    </div>
-                    <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {stage.detail}
-                    </div>
-                  </div>
+
+          {/* Backend zone — ingestion writes into the graph */}
+          <div className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+              Backend — offline / on-demand, writes the graph
+            </div>
+            <div className="flex flex-col">
+              {INGESTION_STAGES.map((stage, i) => (
+                <div key={stage.title} className="flex flex-col">
+                  <StageRow stage={stage} />
+                  {i < INGESTION_STAGES.length - 1 && <FlowConnector delay={i * 0.3} />}
                 </div>
-                {i < STAGES.length - 1 && (
-                  <div className="relative h-6 w-10 shrink-0 overflow-hidden">
-                    <div className="absolute left-1/2 h-full w-px -translate-x-1/2 bg-zinc-300 dark:bg-zinc-700" />
-                    <div
-                      className="pipeline-flow-dot absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
-                      style={{ animationDelay: `${i * 0.3}s` }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          <FlowConnector delay={0.9} />
+
+          {/* Shared hub */}
+          <div className="rounded-xl border-2 border-zinc-400 bg-white p-4 dark:border-zinc-500 dark:bg-zinc-900">
+            <StageRow stage={NEO4J_STAGE} />
+          </div>
+
+          <FlowConnector delay={0} reverse />
+
+          {/* Frontend zone — reads only, never writes */}
+          <div className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+              Frontend — always-on, read-only from the graph
+            </div>
+            <div className="flex flex-col">
+              {WEB_STAGES.map((stage, i) => (
+                <div key={stage.title} className="flex flex-col">
+                  <StageRow stage={stage} />
+                  {i < WEB_STAGES.length - 1 && <FlowConnector delay={i * 0.3} reverse />}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -310,30 +352,24 @@ export default async function Pipeline() {
               <label
                 key={org.name}
                 className={`flex items-center justify-between gap-3 px-4 py-2 text-sm ${
-                  org.cached ? "cursor-pointer" : "opacity-40"
+                  org.cached ? "cursor-pointer" : "opacity-70"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="orgs"
-                    value={org.name}
-                    disabled={!org.cached}
-                    className="h-4 w-4"
-                  />
-                  <span>{org.loaded ? "✅" : org.needs_validation ? "⚠️" : "⬜"}</span>
-                  <span className="text-black dark:text-zinc-50">{org.name}</span>
-                  {org.needs_validation && (
-                    <span
-                      title={
-                        org.validation_note ??
-                        (org.url
-                          ? "Flagged for validation before trusting this org's data."
-                          : "No URL on file — can't be scraped until one is confirmed.")
-                      }
-                      className="cursor-help text-xs text-amber-600 dark:text-amber-500"
-                    >
-                      (?)
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="orgs"
+                      value={org.name}
+                      disabled={!org.cached}
+                      className="h-4 w-4"
+                    />
+                    <span>{org.loaded ? "✅" : org.issue ? "⚠️" : "⬜"}</span>
+                    <span className="text-black dark:text-zinc-50">{org.name}</span>
+                  </div>
+                  {org.issue && (
+                    <span className="pl-6 text-xs text-amber-600 dark:text-amber-500">
+                      {org.issue}
                     </span>
                   )}
                 </div>

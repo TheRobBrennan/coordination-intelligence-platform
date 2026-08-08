@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "note": "Real outcomes from the last full seed-list fetch (all URLed orgs), not simulated. Read by apps/api/app/admin.py to surface actual ingestion problems per org, instead of a generic validation note."
+  },
+  "errors": {
+    "American Weather Enterprise Association": "DNS lookup failed for weatherassociation.org — domain doesn't resolve",
+    "InfraGard Houston Members Alliance": "DNS lookup failed for infragardhouston.org — domain doesn't resolve"
+  }
+}

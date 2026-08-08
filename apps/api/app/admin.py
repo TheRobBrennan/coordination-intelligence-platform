@@ -55,6 +55,25 @@ def _load_seed_orgs() -> list[dict]:
     return json.loads((_SEED_DIR / "organizations.json").read_text())["organizations"]
 
 
+def _load_fetch_errors() -> dict[str, str]:
+    path = _SEED_DIR / "fetch-log.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text()).get("errors", {})
+
+
+def _issue(org: dict, *, cached: bool, fetch_errors: dict[str, str]) -> str | None:
+    """A real, currently-known reason this org isn't ready to demo — sourced
+    from an actual ingestion attempt, not a static seed-authored note."""
+    if error := fetch_errors.get(org["name"]):
+        return error
+    if not org.get("url"):
+        return "No URL on file — can't be scraped until one is confirmed"
+    if not cached:
+        return "URL on file, but never fetched yet"
+    return None
+
+
 @router.get("/stats")
 async def stats(request: Request) -> dict:
     return await _graph(request).admin_stats()
@@ -65,14 +84,18 @@ async def seed_status(request: Request) -> dict:
     graph = _graph(request)
     seed_orgs = _load_seed_orgs()
     loaded = {n.lower() for n in await graph.loaded_org_names()}
-    orgs = [
-        {
-            **o,
-            "loaded": o["name"].lower() in loaded,
-            "cached": _fixture_path(o["name"]).exists(),
-        }
-        for o in seed_orgs
-    ]
+    fetch_errors = _load_fetch_errors()
+    orgs = []
+    for o in seed_orgs:
+        cached = _fixture_path(o["name"]).exists()
+        orgs.append(
+            {
+                **o,
+                "loaded": o["name"].lower() in loaded,
+                "cached": cached,
+                "issue": _issue(o, cached=cached, fetch_errors=fetch_errors),
+            }
+        )
     return {"organizations": orgs, "loaded_count": len(loaded), "total_count": len(seed_orgs)}
 
 
