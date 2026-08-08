@@ -38,7 +38,7 @@ seam.
   `package.json` pins `packageManager: pnpm@11.8.0` and `engines.pnpm: >=11`.
   Never run `npm install`, `npm run`, or `npx` in this repo or suggest them to
   the user — use `pnpm`, `pnpm add`, `pnpm dlx`. See
-  [docs/pnpm-for-npm-users.md](docs/pnpm-for-npm-users.md) for the full
+  [docs/guides/pnpm-for-npm-users.md](docs/guides/pnpm-for-npm-users.md) for the full
   cheat sheet (the user is coming from npm and has npm muscle memory/aliases —
   always give them the pnpm command, not npm).
 - **Python (`apps/api`, `ingestion`): uv only.** Both are managed with `uv`
