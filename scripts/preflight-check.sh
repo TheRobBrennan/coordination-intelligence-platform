@@ -59,6 +59,22 @@ wait_for_log() {
   done
 }
 
+# Waits for $1 to answer HTTP 200, polling every 2s up to $2 seconds (default
+# 60). `docker compose up -d` (what down-tunnel's --force-recreate uses)
+# returns once containers *start*, not once Next.js/Keycloak inside them are
+# actually serving requests — found by hitting this exact race manually
+# (net::ERR_CONNECTION_RESET) running Playwright immediately after down-tunnel.
+wait_for_http() {
+  local url="$1" timeout="${2:-60}" waited=0
+  until [ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 "$url" 2>/dev/null)" = "200" ]; do
+    waited=$((waited + 2))
+    if [ "$waited" -ge "$timeout" ]; then
+      fail "Timed out after ${timeout}s waiting for $url to respond"
+    fi
+    sleep 2
+  done
+}
+
 # Runs the existing login.spec.ts against $1, headless. This is the actual
 # proof — not "the page loaded," but "sign in, session shows, sign out,
 # lands back on the right host" all pass as real assertions.
@@ -88,6 +104,7 @@ verify_neo4j() {
 }
 
 WEB_LOCAL="http://localhost:3000"
+AUTH_LOCAL="http://localhost:8080"
 NEO4J_LOCAL="http://localhost:7474"
 WEB_TUNNEL="https://cip-preview-web.sploosh.ai"
 AUTH_TUNNEL="https://cip-preview-auth.sploosh.ai"
@@ -120,6 +137,18 @@ wait_for_log "$TUNNEL_LOG" 'Registered tunnel connection' 120
 wait_for_log "$TUNNEL_LOG" 'Ready in' 60
 ok "Tunnel is connected"
 
+# "Ready in" only means the process started; Next.js still JIT-compiles each
+# route on its first real hit, and this is also the tunnel's first actual
+# round-trip through Cloudflare's edge. Found by testing: the very first
+# Playwright run against a freshly-connected tunnel timed out waiting for the
+# login form (30s) while an identical second run passed in 14s — pure
+# cold-start latency, not a code bug. Warm the routes the real test will hit
+# before asserting anything, so the timing failure can't recur.
+log "Warming up tunnel routes before verifying (cold-start latency, not optional)"
+curl -sS -o /dev/null --max-time 15 "$WEB_TUNNEL/" || true
+curl -sS -o /dev/null --max-time 15 "$AUTH_TUNNEL/realms/platform" || true
+sleep 2
+
 open -a Safari "$WEB_TUNNEL"
 open -a Safari "$NEO4J_TUNNEL"
 verify_login "$WEB_TUNNEL" "the public tunnel"
@@ -132,7 +161,14 @@ echo "Reverts web/keycloak to local-only config too, not just removing the"
 echo "cloudflared container — see docs/runbook.md if this ever seems to only"
 echo "half-work again."
 make down-tunnel
-ok "Tunnel torn down, web/keycloak reverted to local-only"
+# Both web AND keycloak get --force-recreate'd here — waiting on just one of
+# them isn't enough. Found by testing: web (Next.js dev server) comes up in
+# well under a second, but keycloak is a JVM doing a realm import and takes
+# noticeably longer — the login flow's redirect *to* Keycloak hit
+# ERR_CONNECTION_RESET because only the web app's readiness was checked.
+wait_for_http "$WEB_LOCAL" 60
+wait_for_http "$AUTH_LOCAL/realms/platform" 60
+ok "Tunnel torn down, web/keycloak reverted to local-only and confirmed serving"
 
 # ── 4. Prove the tunnel URLs are actually gone ───────────────────────────
 log "Step 4/6 — prove the tunnel URLs are actually gone, not just 'probably down'"

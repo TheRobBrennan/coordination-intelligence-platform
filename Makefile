@@ -28,15 +28,25 @@ up:  ## Bring the stack up (Neo4j + Keycloak + API), hot reload. Ctrl+C stops.
 up-web:  ## Same as up, plus the Next.js web app (needs apps/web scaffolded)
 	$(COMPOSE) --profile web up --build
 
-down:  ## Stop everything (including the web/ingest profiles, if running)
-	$(COMPOSE) --profile web --profile ingest down
+down:  ## Stop everything (including the web/ingest/tunnel profiles, if running)
+	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down
 
 build:  ## Rebuild all images from scratch (no cache) and recreate containers
 	$(COMPOSE) build --no-cache
 	$(COMPOSE) up -d --force-recreate
 
-clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles)
-	$(COMPOSE) --profile web --profile ingest down -v --rmi local
+# Uses TUNNEL_COMPOSE, not COMPOSE, even though this is meant to be a clean
+# slate for the plain (non-tunnel) path. Found by testing: if a prior session
+# ends abnormally while the tunnel is up (a script's early exit, Ctrl-C), the
+# cloudflared container is defined only in docker-compose.tunnel.yml — a plain
+# COMPOSE-scoped teardown never reaches it, so it keeps running orphaned. The
+# next `make up-tunnel` then sees it already "Running" and never re-emits its
+# startup logs, which looks like a hung/broken tunnel but is actually stale
+# state from a `clean` that wasn't actually clean. TUNNEL_COMPOSE is a strict
+# superset here — it still tears down the base stack correctly when the
+# tunnel was never touched, and additionally catches cloudflared when it was.
+clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles incl. tunnel)
+	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down -v --rmi local
 
 logs:  ## Tail logs from all running services
 	$(COMPOSE) logs -f
