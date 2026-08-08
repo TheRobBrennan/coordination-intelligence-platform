@@ -51,7 +51,18 @@ negative case checked too, not just the happy path.
 cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
 ./scripts/preflight-check.sh              # pauses between stages so you can watch each one
 ./scripts/preflight-check.sh --no-pause   # runs straight through, unattended
+./scripts/preflight-check.sh --headed     # real visible browser windows, slowed
+                                           # down — this is the one to run
+                                           # WITH Kathy, not for yourself
 ```
+
+**`--headed` is the one worth running live at the table.** It's the same
+proof as always — sign in, session shows, sign out, lands back on the right
+host — except it happens in an actual visible browser window she can watch,
+slowed down enough to follow (not flashing by in under a second), with a
+pause between each stage so you're narrating, not racing through. This is
+the demo-plan equivalent of "don't just tell her it works, show her it
+working."
 
 This runs every step below automatically — clean slate, local login proven
 (via `e2e/login.spec.ts`, real Playwright assertions, not a page-load check),
