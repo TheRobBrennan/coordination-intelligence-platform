@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { signIn } from "@/auth";
 import { getSession } from "@/lib/session";
 import LocalTime from "./LocalTime";
+import ScrollToTop from "./ScrollToTop";
 
 const API_BASE =
   process.env.API_INTERNAL_BASE_URL ??
@@ -48,7 +49,7 @@ async function resetDemoData() {
   await fetch(`${API_BASE}/admin/reset`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
-  redirect("/pipeline#stats-top");
+  redirect("/pipeline");
 }
 
 async function cleanToEmpty() {
@@ -56,7 +57,7 @@ async function cleanToEmpty() {
   await fetch(`${API_BASE}/admin/clean`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
-  redirect("/pipeline#stats-top");
+  redirect("/pipeline");
 }
 
 async function runSelected(formData: FormData) {
@@ -71,7 +72,7 @@ async function runSelected(formData: FormData) {
     revalidatePath("/pipeline");
     revalidatePath("/");
   }
-  redirect("/pipeline#stats-top");
+  redirect("/pipeline");
 }
 
 async function runAllCached() {
@@ -79,7 +80,7 @@ async function runAllCached() {
   await fetch(`${API_BASE}/admin/ingest`, { method: "POST" });
   revalidatePath("/pipeline");
   revalidatePath("/");
-  redirect("/pipeline#stats-top");
+  redirect("/pipeline");
 }
 
 // The seed file lives on the server (mounted into the API container) — link
@@ -212,6 +213,7 @@ export default async function Pipeline() {
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-10 font-sans dark:bg-black">
+      <ScrollToTop />
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-3">
