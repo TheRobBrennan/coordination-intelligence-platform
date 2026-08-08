@@ -33,6 +33,71 @@ whichever URL you chose (`http://localhost:3000` or
 `https://cip-preview-web.sploosh.ai`) and confirm it actually works. Don't
 find out it's broken at the table.
 
+### Full pre-flight verification (clean slate, both paths, proven not assumed)
+
+Run this the morning of, or any time you want to re-prove the whole story
+instead of trusting memory. It's the same sequence used to find and fix the
+`KC_HOSTNAME` / `AUTH_URL` bugs below — clean slate, both paths tested, the
+negative case checked too, not just the happy path.
+
+```bash
+cd /Users/rob/repos/kathy-green/coordination-intelligence-platform
+
+# 1. Clean slate — wipe volumes/images so nothing stale from a prior run can
+#    hide a real bug. Costs nothing right now: no data has been ingested yet.
+make clean
+make up-web
+```
+Wait for `✓ Ready in ...` in the terminal, then:
+```bash
+open -a Safari "http://localhost:3000"
+```
+Sign in as `demo-analyst` / `demo`, confirm **"Signed in as Demo Analyst,"**
+sign out, confirm it lands back on the sign-in screen. This is a real login on
+a genuinely clean instance, not a warm cache.
+
+```bash
+# 2. Bring the tunnel up on top of the same running stack
+make up-tunnel
+```
+Wait for `Registered tunnel connection` in `make logs-tunnel`, then:
+```bash
+open -a Safari "https://cip-preview-web.sploosh.ai"
+```
+Same check, over the public URL: sign in as `demo-analyst` / `demo`, confirm
+the session shows, sign out, confirm it lands back on
+`cip-preview-web.sploosh.ai` — **not** localhost.
+
+```bash
+# 3. Spin the tunnel back down — web/api/etc keep running
+make down-tunnel
+```
+
+```bash
+# 4. Prove the tunnel URLs are actually gone, not just "probably down."
+#    Expect HTTP 530 / "error code: 1033" — Cloudflare's own "tunnel not
+#    connected" error, not a connection failure. DNS still resolves; the
+#    request reaches Cloudflare's edge and gets turned away there.
+curl -sS -o /dev/null -w "web:  HTTP %{http_code}\n"  --max-time 10 https://cip-preview-web.sploosh.ai/
+curl -sS -o /dev/null -w "auth: HTTP %{http_code}\n"  --max-time 10 https://cip-preview-auth.sploosh.ai/realms/platform
+open -a Safari "https://cip-preview-web.sploosh.ai"
+```
+Safari should show Cloudflare's error page, not the app. Worth actually seeing
+this once — it's the exact signature to recognize if the tunnel drops for real
+during the meeting, instead of mistaking it for something else.
+
+```bash
+# 5. Confirm localhost is completely unaffected by any of the above
+open -a Safari "http://localhost:3000"
+```
+Sign in one more time. If this still works after steps 2–4, the actual
+guarantee holds: local never depended on the tunnel, at any point in the
+sequence — not "probably fine," proven, right before walking out the door.
+
+### 6. Resounding applause and more cash in hand
+
+Not a `make` target. No test covers this one. Bring your own charm.
+
 ### What you're actually demoing
 
 This depends on whether steps 1–2 below got finished tonight — check honestly,
