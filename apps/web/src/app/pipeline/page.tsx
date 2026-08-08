@@ -62,14 +62,15 @@ async function cleanToEmpty() {
 async function runSelected(formData: FormData) {
   "use server";
   const orgs = formData.getAll("orgs").map(String);
-  if (orgs.length === 0) return;
-  await fetch(`${API_BASE}/admin/ingest`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orgs }),
-  });
-  revalidatePath("/pipeline");
-  revalidatePath("/");
+  if (orgs.length > 0) {
+    await fetch(`${API_BASE}/admin/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orgs }),
+    });
+    revalidatePath("/pipeline");
+    revalidatePath("/");
+  }
   redirect("/pipeline#stats-top");
 }
 
