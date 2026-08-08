@@ -88,12 +88,16 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
       # Where profile images live inside the container (see AVATARS_DIR below).
       AVATARS_DIR: /srv/avatars
+      # Seed org list + cached HTML snapshots for the demo "reset & reload"
+      # admin action — see app/admin.py. Read-only, additive.
+      SEED_DIR: /app-seed
     volumes:
       - ../apps/api:/app           # live source for hot reload
       # Keep the container's venv (built at /opt/venv) out of the bind mount.
       # Profile images, mapped from a host folder. Point AVATARS_DIR (in .env) at
       # any path — a folder on this Mac, or a mount from a Docker host / VM.
       - ${AVATARS_DIR:-../assets/avatars}:/srv/avatars:ro
+      - ../ingestion/seed:/app-seed:ro
     healthcheck:
       # python is in the image (no curl/wget in slim) — hit the health route.
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
@@ -115,6 +119,9 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      # Server Components fetch the API inside the Docker network — "localhost"
+      # here would mean the web container itself, not the api service.
+      API_INTERNAL_BASE_URL: http://api:8000
       WATCHPACK_POLLING: "true"    # reliable Next.js hot reload over macOS bind mounts
       # Browser-facing issuer (login redirect + ID-token validation) stays on
       # localhost; KEYCLOAK_INTERNAL_ISSUER is what this container itself uses
