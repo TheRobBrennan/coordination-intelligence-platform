@@ -59,6 +59,9 @@ make down / clean  # stop / hard reset (wipes volumes)
 make check         # report active LLM extraction mode (key vs subscription vs mock)
 make test          # API test suite, in-container
 make test-ingest   # ingestion test suite, in-container
+make test-web      # ALL web tests: vitest unit + Playwright e2e — needs `make up-web`
+                   # already running first; runs via host pnpm, not containerized
+                   # (Playwright drives a real browser through Keycloak login)
 
 # pnpm wrappers — pnpm start/stop/build/clean just shell out to the make
 # targets above (one source of truth for the docker compose invocation):
@@ -66,7 +69,8 @@ pnpm install       # whole JS workspace
 pnpm start         # = make up
 pnpm stop          # = make down
 pnpm dev:api       # native-only fast iteration: just FastAPI (uv run uvicorn ...)
-pnpm test:web      # vitest in apps/web
+pnpm test:web      # vitest ONLY (fast, no live stack needed) — for the full web
+                   # suite including e2e, use `make test-web` instead
 
 cd apps/api && uv run pytest          # api tests, native
 cd ingestion && uv sync --extra dev && uv run pytest   # ingestion tests, native (offline, no DB/key)
