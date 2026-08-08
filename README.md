@@ -45,11 +45,26 @@ That's it. `make up` brings up:
 | Keycloak (auth) | http://localhost:8080 | realm `platform` auto-seeds users `demo-admin` / `demo-analyst` |
 | API (FastAPI) | http://localhost:8000 | hot reload — edit `apps/api`, it reloads in place |
 
-`Ctrl+C` stops it. Add the web UI (`apps/web`) with `make up-web` (see
-[`apps/web/README.md`](apps/web/README.md)) — `pnpm start` runs this by default.
-In Docker Desktop
-everything is grouped under **`coordination-intelligence-platform`** with `cip-*`
-container names, so it's easy to spot among other projects.
+`Ctrl+C` stops it.
+
+`make up` deliberately **doesn't** start the web UI — it's the backend stack
+(graph + auth + API) on its own, which is what most iteration needs and is
+faster to bring up without a Next.js build/watch in the loop. Bring in the
+frontend only when you actually need to click through it:
+
+```bash
+make up-web    # everything above, plus the Next.js web app
+```
+
+| Service | URL | Notes |
+|---|---|---|
+| Web (Next.js) | http://localhost:3000 | needs `make up-web`, not plain `make up` |
+
+See [`apps/web/README.md`](apps/web/README.md) for details — `pnpm start`
+runs plain `make up` by default; use `pnpm start:web` (or `make up-web`
+directly) when you need the UI. In Docker Desktop everything is grouped under
+**`coordination-intelligence-platform`** with `cip-*` container names, so it's
+easy to spot among other projects.
 
 ### URLs & sign-in (local dev)
 
@@ -63,8 +78,8 @@ Everything below is local-dev defaults from `.env.example` / the seed realm —
 | API — topics | http://localhost:8000/topics | — | — |
 | Neo4j Browser | http://localhost:7474 | `neo4j` | `devpassword` |
 | Keycloak admin | http://localhost:8080/admin | `admin` | `admin` |
-| App user (admin role) | via the web app | `demo-admin` | `demo` |
-| App user (analyst role) | via the web app | `demo-analyst` | `demo` |
+| App user (admin role) | http://localhost:3000 (needs `make up-web`) | `demo-admin` | `demo` |
+| App user (analyst role) | http://localhost:3000 (needs `make up-web`) | `demo-analyst` | `demo` |
 
 > Neo4j Bolt connection string for tools: `bolt://localhost:7687` (`neo4j` / `devpassword`).
 
