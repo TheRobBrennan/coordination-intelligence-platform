@@ -28,6 +28,24 @@ _TOPIC_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _snippet(text: str, hit_start: int, hit_end: int, radius: int = 40) -> str:
+    """A word-boundary-safe excerpt around a match, so evidence reads as a real
+    quote instead of a mid-word fragment ("nd the world…" -> "…around the world…")."""
+    start = max(0, hit_start - radius)
+    end = min(len(text), hit_end + radius)
+    if start > 0:
+        next_space = text.find(" ", start)
+        if 0 <= next_space < hit_start:
+            start = next_space + 1
+    if end < len(text):
+        last_space = text.rfind(" ", hit_end, end)
+        if last_space > hit_end:
+            end = last_space
+    prefix = "…" if start > 0 else ""
+    suffix = "…" if end < len(text) else ""
+    return f"{prefix}{text[start:end].strip()}{suffix}"
+
+
 class MockAdapter:
     async def extract_topics(self, *, org_name: str, page_text: str) -> str:
         text = page_text.lower()
@@ -35,9 +53,8 @@ class MockAdapter:
         for topic, keywords in _TOPIC_KEYWORDS.items():
             hit = next((k for k in keywords if k in text), None)
             if hit:
-                # Deterministic confidence from the match — no randomness.
                 idx = text.find(hit)
-                snippet = page_text[max(0, idx - 40): idx + len(hit) + 40].strip()
+                snippet = _snippet(page_text, idx, idx + len(hit))
                 mentions.append(
                     {
                         "topic": topic,

@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import admin
 from .graph import Graph, Neo4jGraph
 from .settings import settings
 
@@ -34,6 +35,9 @@ app.add_middleware(
 )
 
 
+app.include_router(admin.router)
+
+
 def get_graph() -> Graph:  # overridden in tests
     return app.state.graph
 
@@ -50,6 +54,14 @@ async def list_topics(graph: Graph = Depends(get_graph)) -> dict:
 
 @app.get("/topics/{topic}/orgs")
 async def orgs_for_topic(topic: str, graph: Graph = Depends(get_graph)) -> dict:
+    return {"topic": topic, "results": await graph.orgs_for_topic(topic)}
+
+
+@app.get("/topics/search")
+async def search_orgs_for_topic(topic: str, graph: Graph = Depends(get_graph)) -> dict:
+    """Query-param variant of orgs_for_topic — topic names containing "/" (e.g.
+    "Cybersecurity / threat intelligence sharing") break the path-segment route
+    above once percent-decoded by the router. A query param sidesteps that."""
     return {"topic": topic, "results": await graph.orgs_for_topic(topic)}
 
 

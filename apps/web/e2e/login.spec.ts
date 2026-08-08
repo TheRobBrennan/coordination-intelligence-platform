@@ -60,7 +60,7 @@ async function signInFromHome(page: Page, username: string, baseURL: string) {
 test("user can sign in via Keycloak, see their session, and sign out", async ({ page, baseURL }) => {
   await signInFromHome(page, "demo-admin", baseURL ?? "http://localhost:3000");
 
-  await expect(page.getByText(/Signed in as/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sign out/ })).toBeVisible();
 
   const signOutButton = page.getByRole("button", { name: "Sign out" });
   await expect(signOutButton).toBeVisible();
@@ -77,7 +77,7 @@ test("user can sign in via Keycloak, see their session, and sign out", async ({ 
 test("signing out lets a different user sign in", async ({ page, baseURL }) => {
   const resolvedBaseURL = baseURL ?? "http://localhost:3000";
   await signInFromHome(page, "demo-admin", resolvedBaseURL);
-  await expect(page.getByText(/Signed in as/)).toContainText("Demo Admin");
+  await expect(page.getByRole("button", { name: /Sign out/ })).toContainText("Demo Admin");
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("button", { name: "Sign in with Keycloak" })).toBeVisible();
@@ -99,5 +99,5 @@ test("signing out lets a different user sign in", async ({ page, baseURL }) => {
   await handlePasswordResetIfPresent(page, NEW_PASSWORD);
   await page.waitForURL(resolvedBaseURL + "/");
 
-  await expect(page.getByText(/Signed in as/)).toContainText("Demo Analyst");
+  await expect(page.getByRole("button", { name: /Sign out/ })).toContainText("Demo Analyst");
 });

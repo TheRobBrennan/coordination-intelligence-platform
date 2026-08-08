@@ -45,6 +45,13 @@ make up-tunnel     # adds the public URL — needs TUNNEL_TOKEN in .env already 
 They cannot run at the same time (`web` binds port 3000 in both). Sign in as
 `demo-analyst` / `demo` at whichever URL you chose (`http://localhost:3000`
 or `https://cip-preview-web.sploosh.ai`) and confirm it actually works.
+Confirm `/pipeline` loads too — that's the "Behind the scenes" page, worth
+having open in a second tab at the table.
+
+**Verified this morning (2026-08-08, ~9:20am):** signed in, searched, and
+loaded `/pipeline` over both `http://localhost:3000` and
+`https://cip-preview-web.sploosh.ai`, then tore the tunnel down and confirmed
+localhost still worked immediately after. Both paths are proven, not assumed.
 
 ### Full pre-flight verification (clean slate, both paths, proven not assumed)
 
@@ -166,21 +173,33 @@ Not a `make` target. No test covers this one. Bring your own charm.
 
 ### What you're actually demoing
 
-This depends on whether steps 1–2 below got finished tonight — check honestly,
-don't assume:
+Update, morning of: steps 1 and 2 are done, plus a bonus that wasn't planned
+last night — a live "Behind the scenes" page. Demo the real loop, not the
+architecture fallback below (kept for reference in case something breaks at
+the table):
 
-- **If ingestion (step 1) and the search UI (step 2) are done:** demo the real
-  loop — type a topic, see orgs with evidence. This is the thing that proves
-  the PRD's core claim. Walk it live rather than describing it.
-- **If they aren't done:** demo the architecture instead, and say so plainly.
-  Sign in, show the Swagger docs at `:8000/docs`, walk through *why* it's
-  built this way (offline ingestion vs. always-on read app, swappable LLM
-  adapters, swappable auth) and what's left. Kathy is a working partner on
-  this, not a customer to perform for — "here's the engine, here's the plan
-  to finish it" is a legitimate thing to show a person you're building with.
+- **The core loop:** sign in, type a topic (or click one of the suggested
+  chips), see real organizations across sectors with a confidence score and
+  a verbatim evidence quote pulled from their actual website. This is the
+  thing that proves the PRD's core claim — walk it live.
+- **The new bonus — `/pipeline` ("Behind the scenes"):** click it from the
+  header. Shows the live graph (org/topic/connection counts straight from
+  Neo4j), an architecture diagram split into backend (offline ingestion —
+  seed list → scraper → extractor → Neo4j) and frontend (always-on,
+  read-only — Neo4j → API → this web app) zones, and a full interactive
+  visualization of the graph itself — click any organization or topic to
+  highlight its connections. There's also a working "reset & reload" and
+  "run ingestion for selected/all organizations" control right in the UI —
+  this is the "here's the engine running, not just a diagram of it" moment.
+  Good pairing with talking point 2 below.
+- **If something's actually broken:** fall back to the architecture-only
+  version — sign in, show the Swagger docs at `:8000/docs`, walk through
+  *why* it's built this way. Kathy is a working partner on this, not a
+  customer to perform for.
 
-Either way, **do not overstate what's running.** If the graph is empty, don't
-imply it isn't.
+Either way, **do not overstate what's running.** Extraction is still a
+keyword-matching mock adapter, not a real LLM — say so if evidence quality
+comes up. If the graph is empty, don't imply it isn't.
 
 ### Talking points, in order
 
@@ -188,8 +207,10 @@ imply it isn't.
    topic, instantly see which organizations across sectors are working on
    it — with the evidence to back it up."*
 2. **What's built vs. what's proof-of-concept** — full Docker stack, real
-   Keycloak auth, a working read API, ingestion components all tested
-   individually. The gap is orchestration (`run.py`) and the product UI, not
+   Keycloak auth, a working read API, a real ingestion CLI (`run.py`), and
+   now a live operational view of the whole pipeline (`/pipeline`) instead
+   of just a static diagram. The gap is extraction quality (mock keyword
+   matching, not a real LLM yet) and the product UI beyond search, not
    architecture.
 3. **The five open questions** (below) — these are the actual point of
    today's conversation, not a formality after the demo.
