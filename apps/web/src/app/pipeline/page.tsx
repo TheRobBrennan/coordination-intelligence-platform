@@ -159,6 +159,12 @@ export default async function Pipeline() {
             <a href="/" className="text-sm text-zinc-500 underline dark:text-zinc-400">
               &larr; Search
             </a>
+            <a
+              href="#how-it-works"
+              className="text-sm text-zinc-500 underline dark:text-zinc-400"
+            >
+              How it works
+            </a>
             <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
               Behind the scenes
             </h1>
@@ -238,7 +244,7 @@ export default async function Pipeline() {
         </div>
 
         {/* Pipeline stages */}
-        <div className="flex flex-col gap-3">
+        <div id="how-it-works" className="flex scroll-mt-10 flex-col gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             How it works
           </h2>
