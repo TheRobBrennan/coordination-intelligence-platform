@@ -11,7 +11,7 @@
 COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-web down build clean logs ps check test test-ingest
+.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -48,3 +48,10 @@ test:  ## Run the API test suite in the api container
 
 test-ingest:  ## Run the ingestion test suite in the ingest container
 	$(COMPOSE) --profile ingest run --rm --no-deps ingest uv run pytest
+
+test-web:  ## Run all web tests: vitest unit + Playwright e2e (needs `make up-web` running first, host pnpm/Playwright — not containerized). Pass ARGS="--headed" to watch the browser, or use test-web-headed.
+	pnpm --filter web test
+	pnpm --filter web e2e $(ARGS)
+
+test-web-headed:  ## Same as test-web, but Playwright runs headed and slowed down (PLAYWRIGHT_SLOW_MO=500ms) so you can actually watch it
+	PLAYWRIGHT_SLOW_MO=500 $(MAKE) test-web ARGS=--headed
