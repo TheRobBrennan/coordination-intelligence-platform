@@ -133,7 +133,16 @@ export default function GraphViz({
           </button>
         )}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-auto w-full"
+        onClick={(e) => {
+          // Only clear on a direct hit against the svg background itself —
+          // clicks on a pill/path bubble up too, but their target is that
+          // child element, not the svg, so they're left alone here.
+          if (e.target === e.currentTarget) setSelected(null);
+        }}
+      >
         <g strokeLinecap="round" fill="none">
           {edges.map((e, i) => {
             const y1 = orgPos.get(e.org);
