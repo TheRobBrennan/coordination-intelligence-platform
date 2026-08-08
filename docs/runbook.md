@@ -161,3 +161,38 @@ Never in the base `docker-compose.yml`.
 See `docs/plans/2026.08.08/kathy-demo.md` for the full design rationale,
 including why the first read of the repo concluded `KC_HOSTNAME` wasn't needed
 — and why that conclusion turned out to be wrong once actually tested.
+
+### Privileged database access (optional — keys to the kingdom)
+
+The `cip-preview-neo4j.sploosh.ai` route above only carries Neo4j Browser's
+*web page*. You can load it and see the connect screen, but signing in from
+there hangs forever — browsers can only speak WebSocket, and Bolt (Neo4j's
+real protocol) isn't WebSocket. That's a hard limitation, not a
+misconfiguration; no tunnel setting fixes it.
+
+Actual database access — unrestricted Cypher, read/write, the equivalent of
+having the database password — needs a fourth route and a native (non-browser)
+Bolt client. Setup lives in `docs/cloudflare/tunnel-setup.md`, "Step 4 — Add a
+fourth route for real database access." Once that route and its Access policy
+exist:
+
+```bash
+cloudflared access tcp --hostname cip-preview-bolt.sploosh.ai --url localhost:17687
+```
+
+Then point any native Bolt client at `bolt://localhost:17687` — confirmed
+working with both a plain Python `neo4j` driver query and a live
+[Neo4j Desktop 2](https://neo4j.com/download/) connection. Neo4j Desktop is a
+genuinely convenient option here: it's a native (Electron main-process) Bolt
+client, not a browser tab, so it isn't subject to the WebSocket limitation
+above. Worth keeping two saved connections side by side once it's set up:
+
+| Connection name | URL | What it actually is |
+|---|---|---|
+| Local (direct) | `bolt://localhost:7687` | Straight to the Docker container, tunnel not involved |
+| Via Cloudflare Tunnel | `bolt://localhost:17687` | Through `cloudflared access tcp` — this is what's actually reaching the tunnel |
+
+This is optional, and deliberately not part of the default setup — most people
+working on this project never need it. Only set it up for whoever actually
+needs to run ad hoc Cypher against the live graph, and keep the Access policy
+scoped to specific people (an email allowlist), not "anyone authenticated."

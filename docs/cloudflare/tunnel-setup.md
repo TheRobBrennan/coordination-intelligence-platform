@@ -133,13 +133,69 @@ changed from the local-dev default — the default is a well-known placeholder
 documented in the project's own README, not something safe to leave reachable
 from the public internet.
 
+**A hard limitation, worth knowing before anyone spends time on it:** the
+Neo4j route above only carries the graph browser's *web page* — you can load
+`https://cip-preview-neo4j.sploosh.ai/browser/` and see the connect screen,
+but you cannot actually sign in from it. That's not a misconfiguration.
+Browsers can only speak WebSocket, and the database's own protocol (Bolt) is
+not WebSocket — Neo4j Browser's connect attempt will hang and time out no
+matter how the tunnel is configured. This isn't fixable by changing routes.
+
+## Step 4 — Add a fourth route for real database access (optional)
+
+If someone actually needs to run queries remotely (not just see the login
+screen), that requires a **different kind of route** — the Neo4j route above
+is HTTP-only and cannot carry it, and the client isn't a browser tab, it's
+a real Bolt client (`cypher-shell`, a Python/Node driver, etc.) run from a
+terminal.
+
+1. From the tunnel's **Routes** tab, **+ Add route** → **Published application**
+2. Fill in:
+
+   | Field | Value |
+   |---|---|
+   | Subdomain | `cip-preview-bolt` |
+   | Domain | `sploosh.ai` |
+   | Path | leave blank |
+   | Service URL | `tcp://neo4j:7687` — note the `tcp://` scheme, not `http://` |
+
+3. Click **Add route**
+4. This route needs its own protection, separate from the tunnel itself — go to
+   **Zero Trust → Access controls → Applications → Create new application →
+   Self-hosted and private**. Set the hostname to `cip-preview-bolt.sploosh.ai`
+   (same domain, same subdomain you just used), add a policy (e.g. "Allow" for
+   a specific email), and save. Without this, the TCP route exists but nobody
+   can authenticate through it.
+
+**What this enables, and what it doesn't:** anyone allowed by that policy can
+run, on their own machine, `cloudflared access tcp --hostname
+cip-preview-bolt.sploosh.ai --url localhost:<some-port>`, then point a native
+Bolt client (not a browser) at `bolt://localhost:<some-port>`. Confirmed
+working two ways: a plain Python `neo4j` driver query, and a live
+[Neo4j Desktop 2](https://neo4j.com/download/) connection. This does **not**
+make Neo4j Browser itself work remotely — same WebSocket limitation as above,
+unrelated to this route.
+
+**This is privileged access — treat the policy accordingly.** Unlike the demo
+app (read-only, walks a search flow), a Bolt connection is unrestricted Cypher
+against the live database: read, write, delete, schema changes, all of it. The
+Access policy in step 4 is what actually limits who gets in — keep it scoped
+to specific people who need it (an email allowlist, not "anyone
+authenticated"), and treat handing someone `cloudflared access tcp` access the
+same way you'd treat handing them the database password directly, because
+functionally that's what it is. Optional for most people working on this
+project — only worth setting up for whoever actually needs to run ad hoc
+Cypher against the live graph, not something to hand out by default.
+
 ## You're done
 
 At this point:
 - The tunnel exists, named `cip-preview`
-- Three routes exist under its **Routes** tab: `cip-preview-web.sploosh.ai` →
-  `http://web:3000`, `cip-preview-auth.sploosh.ai` → `http://keycloak:8080`,
-  and `cip-preview-neo4j.sploosh.ai` → `http://neo4j:7474`
+- Three HTTP routes exist under its **Routes** tab: `cip-preview-web.sploosh.ai`
+  → `http://web:3000`, `cip-preview-auth.sploosh.ai` → `http://keycloak:8080`,
+  `cip-preview-neo4j.sploosh.ai` → `http://neo4j:7474`
+- If step 4 was done, a fourth TCP route exists: `cip-preview-bolt.sploosh.ai`
+  → `tcp://neo4j:7687`, gated by its own Access application and policy
 - You've handed off (or entered) the `TUNNEL_TOKEN`
 
 The tunnel's **Overview** tab will show status **"Inactive"** until an
