@@ -1,75 +1,62 @@
-// Dependency-free radial graph — topics on an inner ring, orgs on an outer
-// ring, edges drawn between them. Pure SVG, no client JS, so it renders
-// straight out of a Server Component. Deliberately simple (no physics sim,
-// no drag/zoom) — this is a "see the shape of the data" view, not a
-// full graph explorer.
+"use client";
+
+// Dependency-free bipartite graph — topics in a left column, orgs in a right
+// column, edges drawn between them as curves. No physics sim, no drag/zoom —
+// a "see the shape of the data" view, not a full graph explorer. Interactive:
+// click a pill to highlight every edge touching it, or click an edge itself
+// to highlight just that one connection.
+
+import { useState } from "react";
 
 type Edge = { org: string; topic: string; confidence: number };
 type OrgNode = { name: string; sector: string };
 
-const PALETTE = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
-  "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#a855f7", "#84cc16", "#f43f5e",
-];
+const TOPIC_COLOR = "#111827"; // near-black — topics
+const ORG_COLOR = "#2563eb"; // blue — organizations
+const HIGHLIGHT_COLOR = "#f97316"; // orange — active selection
 
-function colorFor(key: string): string {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
+const ROW_HEIGHT = 30;
+const PAD_Y = 24;
+const COL_WIDTH = 260;
+const GUTTER = 120;
 
-// A label short enough to fit inside a small circle: prefer a parenthetical
-// acronym if the name already has one ("... (AFPM)" -> "AFPM"), otherwise
-// initials of the significant words.
-function shortLabel(name: string, maxLetters = 3): string {
-  const paren = name.match(/\(([A-Z0-9]{2,6})\)/);
-  if (paren) return paren[1];
-  const words = name
-    .replace(/[()]/g, "")
-    .split(/[\s/-]+/)
-    .filter((w) => w.length > 2 && !/^(of|the|and|for)$/i.test(w));
-  const initials = words
-    .slice(0, maxLetters)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
-  return initials || name.slice(0, maxLetters).toUpperCase();
-}
+// Selection is either a node ("node:<name>") or a single edge
+// ("edge:<org>::<topic>") — null means nothing selected.
+type Selection = string | null;
 
-function LabeledNode({
+function Pill({
   x,
   y,
-  r,
-  fill,
+  width,
+  color,
   label,
-  title,
-  fontSize,
+  align,
+  dimmed,
+  onClick,
 }: {
   x: number;
   y: number;
-  r: number;
-  fill: string;
+  width: number;
+  color: string;
   label: string;
-  title: string;
-  fontSize: number;
+  align: "left" | "right";
+  dimmed: boolean;
+  onClick: () => void;
 }) {
+  const boxX = align === "left" ? x : x - width;
   return (
-    <g>
-      <circle cx={x} cy={y} r={r} fill={fill} stroke="white" strokeWidth={1} />
+    <g onClick={onClick} className="cursor-pointer" opacity={dimmed ? 0.3 : 1}>
+      <rect x={boxX} y={y - 11} width={width} height={22} rx={11} fill={color} />
       <text
-        x={x}
+        x={x + (align === "left" ? 10 : -10)}
         y={y}
-        textAnchor="middle"
+        textAnchor={align === "left" ? "start" : "end"}
         dominantBaseline="central"
-        fontSize={fontSize}
-        fontWeight={600}
-        fill="black"
-        stroke="white"
-        strokeWidth={2.5}
-        paintOrder="stroke"
+        fontSize={10}
+        fill="white"
       >
         {label}
       </text>
-      <title>{title}</title>
     </g>
   );
 }
@@ -78,26 +65,12 @@ export default function GraphViz({
   topics,
   orgs,
   edges,
-  height = 460,
 }: {
   topics: string[];
   orgs: OrgNode[];
   edges: Edge[];
-  height?: number;
 }) {
-  const width = 640;
-  const cx = width / 2;
-  const cy = height / 2;
-  const topicR = Math.min(width, height) * 0.2;
-  const orgR = Math.min(width, height) * 0.44;
-
-  const pos = (count: number, index: number, radius: number) => {
-    const angle = (index / Math.max(count, 1)) * 2 * Math.PI - Math.PI / 2;
-    return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
-  };
-
-  const topicPos = new Map(topics.map((t, i) => [t, pos(topics.length, i, topicR)]));
-  const orgPos = new Map(orgs.map((o, i) => [o.name, pos(orgs.length, i, orgR)]));
+  const [selected, setSelected] = useState<Selection>(null);
 
   if (topics.length === 0 || orgs.length === 0) {
     return (
@@ -107,60 +80,127 @@ export default function GraphViz({
     );
   }
 
+  const rows = Math.max(topics.length, orgs.length);
+  const height = rows * ROW_HEIGHT + PAD_Y * 2;
+  const width = COL_WIDTH * 2 + GUTTER;
+  const leftX = 0;
+  const rightX = width;
+
+  const yFor = (index: number, count: number) => {
+    const blockHeight = count * ROW_HEIGHT;
+    const offset = (rows * ROW_HEIGHT - blockHeight) / 2;
+    return PAD_Y + offset + index * ROW_HEIGHT + ROW_HEIGHT / 2;
+  };
+
+  const topicPos = new Map(topics.map((t, i) => [t, yFor(i, topics.length)]));
+  const orgPos = new Map(orgs.map((o, i) => [o.name, yFor(i, orgs.length)]));
+
+  const pillWidth = (label: string) => Math.min(COL_WIDTH, Math.max(60, label.length * 5.6 + 24));
+
+  const edgeId = (e: Edge) => `edge:${e.org}::${e.topic}`;
+  const toggle = (id: string) => setSelected((cur) => (cur === id ? null : id));
+
+  const edgeIsActive = (e: Edge) =>
+    selected === edgeId(e) || selected === `node:${e.org}` || selected === `node:${e.topic}`;
+
+  const anySelected = selected !== null;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
-      <g strokeLinecap="round">
-        {edges.map((e, i) => {
-          const a = orgPos.get(e.org);
-          const b = topicPos.get(e.topic);
-          if (!a || !b) return null;
+    <div>
+      <div className="mb-2 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: TOPIC_COLOR }}
+            />
+            Topic
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: ORG_COLOR }}
+            />
+            Organization
+          </span>
+        </div>
+        {anySelected && (
+          <button
+            onClick={() => setSelected(null)}
+            className="underline hover:opacity-70"
+          >
+            Clear selection
+          </button>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
+        <g strokeLinecap="round" fill="none">
+          {edges.map((e, i) => {
+            const y1 = orgPos.get(e.org);
+            const y2 = topicPos.get(e.topic);
+            if (y1 === undefined || y2 === undefined) return null;
+            const midX = width / 2;
+            const x1 = leftX + pillWidth(e.topic);
+            const x2 = rightX - pillWidth(e.org);
+            const active = edgeIsActive(e);
+            const d = `M ${x1} ${y2} C ${midX} ${y2}, ${midX} ${y1}, ${x2} ${y1}`;
+            return (
+              <g key={i} onClick={() => toggle(edgeId(e))} className="cursor-pointer">
+                {/* Invisible fat hit-area — the visible line below is only
+                    1-2px, too thin to reliably click on its own. */}
+                <path d={d} stroke="transparent" strokeWidth={14} fill="none" />
+                <path
+                  d={d}
+                  stroke={active ? HIGHLIGHT_COLOR : "currentColor"}
+                  strokeOpacity={active ? 0.9 : anySelected ? 0.04 : 0.1 + e.confidence * 0.3}
+                  strokeWidth={active ? 2 : 1}
+                  fill="none"
+                  className={active ? "" : "text-zinc-400 dark:text-zinc-600"}
+                />
+              </g>
+            );
+          })}
+        </g>
+        {topics.map((t) => {
+          const y = topicPos.get(t);
+          if (y === undefined) return null;
+          const active = selected === `node:${t}`;
+          const dimmed = anySelected && !active && !edges.some((e) => e.topic === t && edgeIsActive(e));
           return (
-            <line
-              key={i}
-              x1={a.x}
-              y1={a.y}
-              x2={b.x}
-              y2={b.y}
-              stroke="currentColor"
-              strokeOpacity={0.12 + e.confidence * 0.35}
-              strokeWidth={1}
-              className="text-zinc-400 dark:text-zinc-600"
+            <Pill
+              key={t}
+              x={leftX}
+              y={y}
+              width={pillWidth(t)}
+              color={active ? HIGHLIGHT_COLOR : TOPIC_COLOR}
+              label={t}
+              align="left"
+              dimmed={dimmed}
+              onClick={() => toggle(`node:${t}`)}
             />
           );
         })}
-      </g>
-      {orgs.map((o) => {
-        const p = orgPos.get(o.name);
-        if (!p) return null;
-        return (
-          <LabeledNode
-            key={o.name}
-            x={p.x}
-            y={p.y}
-            r={11}
-            fill={colorFor(o.sector)}
-            label={shortLabel(o.name, 2)}
-            title={`${o.name} — ${o.sector}`}
-            fontSize={8}
-          />
-        );
-      })}
-      {topics.map((t) => {
-        const p = topicPos.get(t);
-        if (!p) return null;
-        return (
-          <LabeledNode
-            key={t}
-            x={p.x}
-            y={p.y}
-            r={20}
-            fill={colorFor(t)}
-            label={shortLabel(t, 3)}
-            title={t}
-            fontSize={10}
-          />
-        );
-      })}
-    </svg>
+        {orgs.map((o) => {
+          const y = orgPos.get(o.name);
+          if (y === undefined) return null;
+          const active = selected === `node:${o.name}`;
+          const dimmed =
+            anySelected && !active && !edges.some((e) => e.org === o.name && edgeIsActive(e));
+          return (
+            <Pill
+              key={o.name}
+              x={rightX}
+              y={y}
+              width={pillWidth(o.name)}
+              color={active ? HIGHLIGHT_COLOR : ORG_COLOR}
+              label={o.name}
+              align="right"
+              dimmed={dimmed}
+              onClick={() => toggle(`node:${o.name}`)}
+            />
+          );
+        })}
+      </svg>
+    </div>
   );
 }

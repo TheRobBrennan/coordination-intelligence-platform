@@ -276,7 +276,6 @@ export default async function Pipeline() {
           <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
             <GraphViz topics={graph.topics} orgs={graph.orgs} edges={graph.edges} />
             <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
-              &#9679; large dots are topics, small dots are organizations — hover a dot for its name.
               Updates instantly after any reset/run action above.
             </p>
           </div>

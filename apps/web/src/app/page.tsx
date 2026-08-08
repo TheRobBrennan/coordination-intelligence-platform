@@ -153,7 +153,6 @@ export default async function Home({
               topics={[...new Set(results.map((r) => r.topic))]}
               orgs={[...new Map(results.map((r) => [r.org, { name: r.org, sector: r.sector }])).values()]}
               edges={results}
-              height={280}
             />
           </div>
         )}
