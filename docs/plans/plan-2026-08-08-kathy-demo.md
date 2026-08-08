@@ -74,10 +74,11 @@ can wait.
    `.env` — so `make up-web` with no override flag is provably localhost-safe at
    every point in the night, tunnel work in progress or not.
 5. **Step 0 is time-boxed.** Budget ~60 minutes. If DNS, the tunnel, or the
-   Keycloak hostname/redirect-URI dance isn't clean by then, revert
-   `KC_HOSTNAME` and the redirect URIs, confirm localhost still signs in, and
-   move on to step 1. A live domain is worth having; it is not worth trading
-   the actual demo content for.
+   redirect-URI dance isn't clean by then, stop the `docker-compose.tunnel.yml`
+   override (the base compose file was never touched, so this is just `docker
+   compose --profile tunnel down`), confirm localhost still signs in, and move
+   on to step 1. A live domain is worth having; it is not worth trading the
+   actual demo content for.
 
 ## Tonight's plan
 
