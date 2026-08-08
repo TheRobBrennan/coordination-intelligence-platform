@@ -49,10 +49,16 @@ can wait.
 1. Neo4j holds real extracted data for a handful of real organizations
 2. Typing a topic in the web UI returns those organizations, grouped by sector,
    each showing its confidence and the verbatim source quote
-3. The whole thing runs on the MacBook via `make up-web` with **no internet
+3. Keycloak sign-in still works — this is already true today, locally, with no
+   tunnel involved. "Working auth" and "reachable at a public domain" are two
+   separate wins; only the second needs tonight's step 0.
+4. The whole thing is provably demoable via `make up-web` with **no internet
    dependency** — the meeting is in a restaurant, and `localhost` does not care
-   about their wifi
-4. Keycloak sign-in still works, unchanged
+   about their wifi. This has to stay true *even if* step 0 succeeds — see the
+   guardrail below.
+5. *(Stretch, from step 0)* `cip-preview-web.sploosh.ai` resolves, has valid TLS,
+   and signs in cleanly — a live domain to hand Kathy, in addition to the local
+   demo, not instead of it.
 
 ## Guardrails
 
@@ -63,8 +69,78 @@ can wait.
    page fetch to find, not twenty-six.
 3. **`mock` before real LLM calls.** `LLM_PROVIDER=mock` proves the wiring end to
    end at zero cost and zero network.
-4. **Local demo is the primary path.** Any hosted URL is a bonus, never the thing
-   the demo depends on.
+4. **Local demo is the fallback of record, always.** Step 0 must be additive —
+   a compose override, never an edit to `infra/docker-compose.yml` or the shared
+   `.env` — so `make up-web` with no override flag is provably localhost-safe at
+   every point in the night, tunnel work in progress or not.
+5. **Step 0 is time-boxed.** Budget ~60 minutes. If DNS, the tunnel, or the
+   Keycloak hostname/redirect-URI dance isn't clean by then, revert
+   `KC_HOSTNAME` and the redirect URIs, confirm localhost still signs in, and
+   move on to step 1. A live domain is worth having; it is not worth trading
+   the actual demo content for.
+
+## Tonight's plan
+
+### Step 0 — Cloudflare Tunnel, additive only (time-boxed, ~60 min)
+
+Branch: `2026.08.08/cloudflare-tunnel-preview`
+
+`sploosh.ai` is already on Cloudflare nameservers, so there is no nameserver
+migration or propagation wait. `cloudflared` dials out from the MacBook to
+Cloudflare's edge and publishes local ports at public hostnames with valid TLS —
+no inbound ports, no public IP, no hosting cost.
+
+| Hostname | → | Service |
+|---|---|---|
+| `cip-preview-web.sploosh.ai` | → | `localhost:3000` (Next.js) |
+| `cip-preview-auth.sploosh.ai` | → | `localhost:8080` (Keycloak) |
+
+**Corrected understanding (checked against the actual repo, not assumed):**
+`infra/docker-compose.yml` never sets a fixed `KC_HOSTNAME` today, so Keycloak
+already runs in a request-adaptive mode — it is not the coupling point. The real
+coupling is two things in `apps/web/src/auth.ts`:
+
+- `PUBLIC_ISSUER = process.env.KEYCLOAK_ISSUER` — one value for the whole running
+  container, sent to every visitor's browser regardless of which hostname they
+  used
+- `post_logout_redirect_uri: "http://localhost:3000"` — a **literal string** in
+  `signOut()`, not even an env var today
+
+So do this as a strictly additive compose override, never an in-place edit of the
+shared config:
+
+- `infra/docker-compose.yml` (base) is **not modified**. `make up-web` stays the
+  localhost-safe path unconditionally — no discipline required to keep it that
+  way, nothing to remember to revert.
+- New `infra/docker-compose.tunnel.yml` override: adds the `cloudflared` service,
+  and overrides only the `web` service's `KEYCLOAK_ISSUER` and a new
+  `POST_LOGOUT_REDIRECT_URI` env var to the tunnel-facing values.
+- One small code change: `auth.ts`'s hardcoded `post_logout_redirect_uri` becomes
+  `process.env.POST_LOGOUT_REDIRECT_URI ?? "http://localhost:3000"`.
+- Realm `redirectUris` in `infra/keycloak/realm-export.json` gets
+  `https://cip-preview-web.sploosh.ai/*` **added** alongside the existing
+  `http://localhost:3000/*` and `https://*.vercel.app/*` entries — additive, not
+  a swap. `webOrigins` already carries a `+` wildcard that mirrors whatever is in
+  `redirectUris`, so CORS is covered for free. Change it live in the admin
+  console for speed, then persist into `realm-export.json` in the PR —
+  `--import-realm` only applies on a fresh volume.
+- Tunnel-on becomes an explicit extra flag, never a state to forget:
+  `docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --profile tunnel up -d`
+
+**Why this is genuinely step 0 and not step 4:** because it is additive, there is
+no destructive `make clean` involved and no data-loss ordering concern — it could
+technically run after ingestion too. Doing it first is really about *risk*, not
+data: it is the least-proven, most novel piece (first-time `cloudflared` setup,
+DNS, redirect-URI correctness), so it deserves first crack at fresh attention
+rather than being rushed at 1am. If it fails, nothing about steps 1–3 is
+affected — the base compose file was never touched.
+
+**Definition of done for this step:** with the override running, sign in via
+`cip-preview-web.sploosh.ai` using an actual Keycloak account, land back on the
+app authenticated, sign out — *and*, in a separate terminal, confirm
+`make up-web` (no override) still signs in cleanly on `localhost:3000`. If both
+don't hold within the time box, stop the override, confirm localhost still works
+(it should, untouched), and move on to step 1.
 
 ## Tonight's critical path
 
@@ -123,8 +199,8 @@ Branch: `2026.08.08/topic-search-ui` · blocked by step 1
   each with confidence and the verbatim `source_evidence` snippet
 - Click through to an org → its topics
 - **Build it as React Server Components** so Next.js calls FastAPI server-side.
-  The API then never needs to be publicly reachable, which matters if the tunnel
-  below gets set up.
+  The API then never needs to be publicly reachable, which matters now that the
+  tunnel from step 0 may already be live.
 - Empty state and error state that do not look broken — Kathy will type something
   that returns nothing, and that moment should look deliberate
 
@@ -139,43 +215,6 @@ proves the claim; the graph is polish and can wait.
   that can be handed to Kathy and, later, to CXC stakeholders
 - The existing Keycloak login specs keep passing — nothing in this plan touches
   auth
-
-## If there is time — Cloudflare Tunnel preview
-
-**Optional. Skip without guilt if steps 1–3 run long.**
-
-`sploosh.ai` is already on Cloudflare nameservers, so there is no nameserver
-migration or propagation wait. `cloudflared` dials out from the MacBook to
-Cloudflare's edge and publishes local ports at public hostnames with valid TLS —
-no inbound ports, no public IP, no hosting cost.
-
-| Hostname | → | Service |
-|---|---|---|
-| `cip-preview-web.sploosh.ai` | → | `localhost:3000` (Next.js) |
-| `cip-preview-auth.sploosh.ai` | → | `localhost:8080` (Keycloak) |
-
-Run it as its own compose profile so its lifecycle is independent of the app:
-
-```bash
-docker compose --profile tunnel up -d cloudflared    # tunnel up, app untouched
-docker compose --profile tunnel down                 # tunnel down, app keeps running
-```
-
-**The gotcha:** Keycloak must know its public hostname or the OAuth redirect sends
-the visitor's browser to *their* localhost and login dies. That means
-`KC_HOSTNAME=https://cip-preview-auth.sploosh.ai`, the NextAuth issuer updated to
-match, and the realm's redirect URIs pointed at
-`https://cip-preview-web.sploosh.ai/api/auth/callback/keycloak`. Change the
-redirect URIs live in the Keycloak admin console for speed, then persist them into
-`realm-export.json` in the PR — `--import-realm` only applies on a fresh volume.
-
-**Consequence to keep straight:** once `KC_HOSTNAME` points at the tunnel,
-`localhost` logins redirect out to the tunnel too and therefore need internet.
-Keep two `.env` variants and know which one is loaded. **The in-person demo should
-run on the localhost variant** — no wifi dependency.
-
-The tunnel's real value is *after* the meeting: Kathy can revisit the demo and
-share it with CXC stakeholders ahead of the August 20th call.
 
 ## Not tomorrow
 

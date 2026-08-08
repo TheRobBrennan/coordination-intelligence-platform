@@ -5,7 +5,7 @@
 - An LLM key: `ANTHROPIC_API_KEY` (default) or OpenAI/Azure if you flip `LLM_PROVIDER`.
 - (Optional, native path only) Python 3.14 + `uv`, Node 24 LTS + `pnpm` 11
   (`nvm use` reads `.nvmrc` → 24.17.0) — see
-  [pnpm-for-npm-users.md](pnpm-for-npm-users.md). Not needed for the `make` flow.
+  [guides/pnpm-for-npm-users.md](guides/pnpm-for-npm-users.md). Not needed for the `make` flow.
 
 ## 1. Bring up the stack
 ```bash
@@ -60,8 +60,21 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 3. Graph view → see cross-sector overlap; highlight two orgs on the same topic
    with no direct connection = "unconnected parallel efforts" (stretch).
 
-## Deploy (Vercel + AuraDB)
-- Create a free Neo4j AuraDB; copy the `neo4j+s://…` URI + creds into Vercel env.
-- Point ingestion's `NEO4J_URI` at AuraDB and run the batch once to populate.
-- Deploy `apps/web` to Vercel; deploy `apps/api` to Vercel/Render/Fly (it's a
-  read-only service — no Playwright at request time, so serverless is fine).
+## Preview — Cloudflare Tunnel
+
+The Vercel + AuraDB path in the original plan assumed auth stayed thin. It
+didn't — Keycloak is staying (see `docs/plans/plan-2026-08-08-kathy-demo.md`),
+and Vercel cannot host a stateful, always-on Keycloak + Postgres. A Cloudflare
+Tunnel from the same machine running `make up-web` gets a real HTTPS URL without
+a hosting decision at all:
+
+```bash
+make up-tunnel     # everything make up-web gives you, plus the public preview
+make down-tunnel   # tear down just the tunnel; the app keeps running
+```
+
+This is strictly additive — it never modifies `infra/docker-compose.yml`, so
+`make up-web` alone stays localhost-only and unaffected regardless of whether
+the tunnel has ever been run. See the plan doc for the full design (why
+`KEYCLOAK_ISSUER` and not `KC_HOSTNAME` is the actual coupling point, and why
+the fix lives in a compose override rather than a shared `.env` edit).

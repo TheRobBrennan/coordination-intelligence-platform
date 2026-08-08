@@ -176,7 +176,7 @@ root (it reads `.nvmrc` → Node 24.17.0); pnpm is pinned via `packageManager`,
 so `corepack enable` makes the repo use 11.8.0 automatically. `pnpm start` /
 `stop` / `build` / `clean` are thin wrappers around the matching `make`
 target — they bring up the full containerized stack either way; see
-[`docs/pnpm-for-npm-users.md`](docs/pnpm-for-npm-users.md) if pnpm is new to you.
+[`docs/guides/pnpm-for-npm-users.md`](docs/guides/pnpm-for-npm-users.md) if pnpm is new to you.
 The containerized `make` flow above is the recommended default.
 
 See `docs/runbook.md` for the full demo flow (ingestion, seeding, the demo).
