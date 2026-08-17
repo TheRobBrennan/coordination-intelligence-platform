@@ -16,7 +16,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 TUNNEL_COMPOSE := docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed up-tunnel down-tunnel logs-tunnel
+.PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed up-tunnel down-tunnel logs-tunnel deploy deploy-clean deploy-sync
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -81,3 +81,21 @@ down-tunnel:  ## Stop the tunnel AND revert web/keycloak to local-only config (t
 
 logs-tunnel:  ## Tail the tunnel container's logs (connection status, routed requests)
 	$(TUNNEL_COMPOSE) --profile web --profile tunnel logs -f cloudflared
+
+# ORACLE_VM_IP comes from .env (not this file) — see .env.example. Read with
+# grep, not by sourcing .env as shell, since .env isn't guaranteed to be
+# shell-safe (quoting, spaces) even though it's valid for docker's
+# --env-file parsing.
+ORACLE_VM_IP := $(shell grep -m1 '^ORACLE_VM_IP=' .env 2>/dev/null | cut -d= -f2-)
+
+deploy:  ## Ship latest code to the Oracle Cloud VM — rebuilds web+api only, tunnel/Neo4j/Keycloak stay up the whole time. Needs ORACLE_VM_IP in .env
+	@test -n "$(ORACLE_VM_IP)" || { echo "Set ORACLE_VM_IP in .env — see .env.example" >&2; exit 1; }
+	./scripts/deploy/deploy-to-oracle.sh $(ORACLE_VM_IP) --up
+
+deploy-clean:  ## Full fresh-slate deploy to the Oracle Cloud VM — wipes ALL volumes (Neo4j data included) and restarts everything, including the tunnel. Real downtime — only for first-time setup or an intentional data reset, not routine code ships
+	@test -n "$(ORACLE_VM_IP)" || { echo "Set ORACLE_VM_IP in .env — see .env.example" >&2; exit 1; }
+	./scripts/deploy/deploy-to-oracle.sh $(ORACLE_VM_IP) --clean
+
+deploy-sync:  ## Sync latest code + .env to the Oracle Cloud VM WITHOUT rebuilding/restarting anything there
+	@test -n "$(ORACLE_VM_IP)" || { echo "Set ORACLE_VM_IP in .env — see .env.example" >&2; exit 1; }
+	./scripts/deploy/deploy-to-oracle.sh $(ORACLE_VM_IP)

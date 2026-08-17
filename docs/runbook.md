@@ -68,8 +68,8 @@ auto-uses `claude_cli` if `claude` is installed. CLI runs are logged to
 2. The bipartite graph under the results — click any topic or org pill to
    highlight just its connections; click a connecting line itself to
    highlight one specific edge; click empty space to clear.
-3. **"Behind the scenes"** (top-right link, `/pipeline`) — the operational
-   view of the whole thing:
+3. **"How it works"** (top-right link, `/how-it-works-preview`) — the
+   operational view of the whole thing:
    - Live counts (orgs/topics/connections) straight from Neo4j
    - The architecture split into a **backend** zone (offline ingestion:
      seed list → scraper → extractor → Neo4j) and a **frontend** zone

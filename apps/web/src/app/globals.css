@@ -36,7 +36,7 @@ body {
 }
 
 /* Pipeline connector — a small dot traveling down the line between stages
-   on the /pipeline "Behind the scenes" page, suggesting live data flow. */
+   on the /how-it-works-preview "How it works" page, suggesting live data flow. */
 @keyframes pipeline-flow {
   0% {
     transform: translateY(-100%);
