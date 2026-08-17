@@ -1,0 +1,74 @@
+#cloud-config
+#
+# Bootstrap script for the Oracle Cloud VM hosting the CIP demo.
+#
+# Paste this verbatim into the "Initialization script" / "Cloud-init script"
+# box under Advanced Options -> Management when creating the instance in the
+# OCI Console. It runs once, on first boot, as root.
+#
+# What it does:
+#   - Creates a dedicated non-root user (cipdeploy) for all CIP work, so the
+#     account/password OCI hands you for the instance (opc/ubuntu + your SSH
+#     key) never gets used day-to-day.
+#   - Grants that user passwordless sudo and adds ONE ssh public key
+#     (infra/oracle-cloud/cip_oracle_deploy.pub, generated specifically for
+#     this deploy — not reused from any other project).
+#   - Installs Docker Engine + the compose plugin, and adds cipdeploy to the
+#     docker group so it can run `docker compose` without sudo.
+#   - Installs git and make (everything else the repo needs runs in
+#     containers, per the Makefile's own header comment).
+#
+# OS-agnostic on purpose: the OCI Console's image picker had a bug the night
+# this was written (selecting Ubuntu silently reverted to Oracle Linux 9 on
+# confirm — see docs/plans/2026.08.17/oracle-cloud-deploy.md for the full
+# repro), so this detects the distro at boot and installs Docker the right
+# way either way, rather than assuming Ubuntu.
+#
+# After boot, SSH in as cipdeploy (NOT opc/ubuntu) — see
+# ../../docs/plans/2026.08.17/oracle-cloud-deploy.md for the full walkthrough.
+
+users:
+  - name: cipdeploy
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILIhSzBAjWpBwVJYP+PXTzPyzQEacjqMNBoquWMVw58u cip-deploy-oracle-20260817
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - git
+  - make
+  - ca-certificates
+  - curl
+
+# Not using the `packages:` list for git/make/curl above alone would be
+# simpler on one distro, but cloud-init's package module already resolves
+# those names correctly on both apt (Ubuntu) and dnf (Oracle Linux), so no
+# branching needed there. Docker needs branching — see below.
+runcmd:
+  - |
+    set -euo pipefail
+    . /etc/os-release
+    if [ "$ID" = "ubuntu" ] || [ "$ID" = "debian" ]; then
+      curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+      sh /tmp/get-docker.sh
+      rm -f /tmp/get-docker.sh
+    else
+      # Oracle Linux / RHEL family — Docker's official repo, not the distro's
+      # own (older, often podman-oriented) container tooling.
+      dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+      dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    fi
+    usermod -aG docker cipdeploy
+    systemctl enable --now docker
+    # Oracle Linux images ship firewalld active; Ubuntu images don't. Only
+    # SSH needs to stay reachable — the app itself is exposed via Cloudflare
+    # Tunnel (outbound-only), never through the host firewall. No-op, not an
+    # error, if firewalld isn't installed/running (e.g. on Ubuntu).
+    if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+      firewall-cmd --permanent --add-service=ssh
+      firewall-cmd --reload
+    fi
