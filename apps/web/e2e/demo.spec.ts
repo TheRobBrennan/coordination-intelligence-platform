@@ -124,7 +124,7 @@ test.describe.serial("Behind the scenes — live pipeline operations", () => {
     await goToPipeline(page, resolvedBaseURL);
 
     // 1. Wipe to nothing.
-    await page.getByRole("button", { name: "Clean to empty" }).click();
+    await page.getByRole("button", { name: "💥 Nuke data" }).click();
     await page.waitForURL(resolvedBaseURL + "/how-it-works-preview");
     await expect(page.getByText("Nothing to draw yet")).toBeVisible();
     await expect(page.getByText("Seed list — 0 of 29 loaded")).toBeVisible();
