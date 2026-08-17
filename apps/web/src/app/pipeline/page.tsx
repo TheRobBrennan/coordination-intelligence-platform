@@ -95,9 +95,14 @@ async function runAllCached() {
   redirect("/pipeline");
 }
 
-// The seed file lives on the server (mounted into the API container) — link
-// straight to the API's raw file route so it opens the real JSON, not a copy.
-const SEED_JSON_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/seed.json`;
+// The seed file lives on the server (mounted into the API container). Link
+// to this app's own /admin/seed.json route (see
+// app/admin/seed.json/route.ts), which proxies server-side to the API,
+// rather than linking the browser straight at NEXT_PUBLIC_API_BASE_URL —
+// that var has no public hostname over the Cloudflare Tunnel (only
+// web/auth/neo4j are routed) and stays pinned to localhost:8000, which
+// works for a local visitor but not one on the public tunnel URL.
+const SEED_JSON_URL = "/admin/seed.json";
 
 const INGESTION_STAGES = [
   {

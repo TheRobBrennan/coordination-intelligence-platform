@@ -13,6 +13,12 @@
 #   - sets AUTH_URL on web, for the same reason: trustHost's per-request Host
 #     header inference (fine on localhost) is not reliable behind the tunnel
 #
+# The API (apps/api, :8000) has no public hostname of its own — see
+# docs/cloudflare/tunnel-setup.md, only web/auth/neo4j are routed. Anything
+# the browser needs from the API goes through a Next.js route handler that
+# proxies server-side to API_INTERNAL_BASE_URL, not a direct browser->API
+# call — see apps/web/src/app/admin/seed.json/route.ts for why.
+#
 # The third public hostname (cip-preview-neo4j.sploosh.ai -> neo4j:7474, the
 # graph browser's own admin console) needs no service overrides here — it has
 # its own login, unrelated to Keycloak. It's configured entirely on the
