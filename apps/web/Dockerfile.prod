@@ -1,0 +1,28 @@
+# Production image for the Next.js UI — used only for public-facing
+# deployments (Cloudflare Tunnel/VM), never for local dev. See Dockerfile.dev
+# for the day-to-day hot-reload image `make up-web` uses.
+#
+# Found by testing (2026-08-17): running Dockerfile.dev's `next dev` behind
+# the Cloudflare Tunnel left the graph visualization's click-to-highlight
+# fully unresponsive, even though the SVG rendered with real data. The
+# browser console showed the dev server's webpack-HMR WebSocket repeatedly
+# failing to connect over the tunnel — and with it, client-side hydration
+# never completed, so none of the "use client" interactivity (GraphViz's
+# onClick handlers) ever attached. A production build has no HMR client at
+# all, so this whole failure mode doesn't exist.
+FROM node:24.17.0-bookworm-slim
+
+ENV PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+RUN pnpm install
+
+COPY . .
+RUN pnpm build
+
+EXPOSE 3000
+CMD ["pnpm", "start"]
