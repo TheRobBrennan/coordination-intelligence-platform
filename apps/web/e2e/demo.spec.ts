@@ -28,7 +28,7 @@ async function signIn(page: Page, baseURL: string) {
 
 async function goToPipeline(page: Page, baseURL: string) {
   await page.getByRole("link", { name: "Behind the scenes" }).click();
-  await page.waitForURL(baseURL + "/pipeline");
+  await page.waitForURL(baseURL + "/how-it-works-preview");
 }
 
 async function checkOrg(page: Page, orgName: string) {
@@ -125,13 +125,13 @@ test.describe.serial("Behind the scenes — live pipeline operations", () => {
 
     // 1. Wipe to nothing.
     await page.getByRole("button", { name: "Clean to empty" }).click();
-    await page.waitForURL(resolvedBaseURL + "/pipeline");
+    await page.waitForURL(resolvedBaseURL + "/how-it-works-preview");
     await expect(page.getByText("Nothing to draw yet")).toBeVisible();
     await expect(page.getByText("Seed list — 0 of 29 loaded")).toBeVisible();
 
     // 2. Reset back to the curated 6-org demo set.
     await page.getByRole("button", { name: "Reset to clean demo set" }).click();
-    await page.waitForURL(resolvedBaseURL + "/pipeline");
+    await page.waitForURL(resolvedBaseURL + "/how-it-works-preview");
     await expect(page.getByText("Nothing to draw yet")).not.toBeVisible();
     await expect(page.getByText("Seed list — 6 of 29 loaded")).toBeVisible();
 
@@ -142,7 +142,7 @@ test.describe.serial("Behind the scenes — live pipeline operations", () => {
     await checkOrg(page, "Pinkerton");
     await checkOrg(page, "SAIC");
     await page.getByRole("button", { name: "Run selected" }).first().click();
-    await page.waitForURL(resolvedBaseURL + "/pipeline");
+    await page.waitForURL(resolvedBaseURL + "/how-it-works-preview");
 
     await expect(page.getByText("Seed list — 8 of 29 loaded")).toBeVisible();
     await expect(page.locator("label", { hasText: "Pinkerton" })).toContainText("✅");

@@ -59,17 +59,17 @@ async function getGraph(): Promise<GraphSnapshot> {
 async function resetDemoData() {
   "use server";
   await fetch(`${API_BASE}/admin/reset`, { method: "POST" });
-  revalidatePath("/pipeline");
+  revalidatePath("/how-it-works-preview");
   revalidatePath("/");
-  redirect("/pipeline");
+  redirect("/how-it-works-preview");
 }
 
 async function cleanToEmpty() {
   "use server";
   await fetch(`${API_BASE}/admin/clean`, { method: "POST" });
-  revalidatePath("/pipeline");
+  revalidatePath("/how-it-works-preview");
   revalidatePath("/");
-  redirect("/pipeline");
+  redirect("/how-it-works-preview");
 }
 
 async function runSelected(formData: FormData) {
@@ -81,18 +81,18 @@ async function runSelected(formData: FormData) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orgs }),
     });
-    revalidatePath("/pipeline");
+    revalidatePath("/how-it-works-preview");
     revalidatePath("/");
   }
-  redirect("/pipeline");
+  redirect("/how-it-works-preview");
 }
 
 async function runAllCached() {
   "use server";
   await fetch(`${API_BASE}/admin/ingest`, { method: "POST" });
-  revalidatePath("/pipeline");
+  revalidatePath("/how-it-works-preview");
   revalidatePath("/");
-  redirect("/pipeline");
+  redirect("/how-it-works-preview");
 }
 
 // The seed file lives on the server (mounted into the API container). Link
@@ -205,23 +205,28 @@ export default async function Pipeline() {
 
   if (!session?.user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-zinc-50 font-sans dark:bg-black">
-        <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-          Behind the scenes
-        </h1>
-        <form
-          action={async () => {
-            "use server";
-            await signIn("keycloak");
-          }}
-        >
-          <button
-            type="submit"
-            className="rounded-full bg-foreground px-5 py-3 text-background"
+      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 font-sans dark:bg-black">
+        <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h1 className="text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">
+            How it works
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Sign in to see the pipeline that builds the graph.
+          </p>
+          <form
+            action={async () => {
+              "use server";
+              await signIn("keycloak");
+            }}
           >
-            Sign in with Keycloak
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="rounded-full bg-foreground px-5 py-3 text-background"
+            >
+              Sign in
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -229,16 +234,16 @@ export default async function Pipeline() {
   const [stats, seed, graph] = await Promise.all([getStats(), getSeedStatus(), getGraph()]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-10 font-sans dark:bg-black">
+    <div className="min-h-screen bg-zinc-50 px-4 py-6 font-sans sm:px-6 sm:py-10 dark:bg-black">
       <ScrollToTop />
-      <div className="mx-auto flex max-w-3xl flex-col gap-8">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-3">
             <a href="/" className="text-sm text-zinc-500 underline dark:text-zinc-400">
-              &larr; Search
+              &larr; Home
             </a>
             <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-              Behind the scenes
+              How it works
             </h1>
           </div>
         </div>
