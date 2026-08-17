@@ -245,3 +245,11 @@ This is optional, and deliberately not part of the default setup — most people
 working on this project never need it. Only set it up for whoever actually
 needs to run ad hoc Cypher against the live graph, and keep the Access policy
 scoped to specific people (an email allowlist), not "anyone authenticated."
+
+## Cloud deploy — moving the tunnel host off the laptop
+
+See [`docs/plans/2026.08.17/oracle-cloud-deploy.md`](plans/2026.08.17/oracle-cloud-deploy.md)
+for standing up the same stack + tunnel on an Oracle Cloud VM instead of a
+laptop, so the demo doesn't depend on a laptop staying on and connected.
+Same `.env`, same Cloudflare Tunnel hostnames — only the host underneath
+changes.

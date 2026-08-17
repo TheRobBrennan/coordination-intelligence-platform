@@ -12,6 +12,20 @@
 #     one is not optional
 #   - sets AUTH_URL on web, for the same reason: trustHost's per-request Host
 #     header inference (fine on localhost) is not reliable behind the tunnel
+#   - rebuilds web from Dockerfile.prod (a real `next build && next start`)
+#     instead of the base file's Dockerfile.dev (`next dev`), and drops the
+#     dev bind-mount — found by testing: the dev server's webpack-HMR
+#     WebSocket can't complete over the tunnel, and client-side hydration
+#     never finishes as a result — every "use client" interactive element
+#     (GraphViz's click-to-highlight) silently does nothing, even though the
+#     server-rendered HTML looks completely normal. No HMR client exists in
+#     a production build, so this failure mode doesn't exist there.
+#
+# The API (apps/api, :8000) has no public hostname of its own — see
+# docs/cloudflare/tunnel-setup.md, only web/auth/neo4j are routed. Anything
+# the browser needs from the API goes through a Next.js route handler that
+# proxies server-side to API_INTERNAL_BASE_URL, not a direct browser->API
+# call — see apps/web/src/app/admin/seed.json/route.ts for why.
 #
 # The third public hostname (cip-preview-neo4j.sploosh.ai -> neo4j:7474, the
 # graph browser's own admin console) needs no service overrides here — it has
@@ -38,6 +52,17 @@ services:
       - web
 
   web:
+    build:
+      dockerfile: Dockerfile.prod
+    # Found by testing: Compose concatenates list-type fields (volumes,
+    # ports, etc.) across -f files by default — a plain `volumes: []` here
+    # does NOT clear the base file's bind mount, it just adds nothing to it.
+    # The base's `../apps/web:/app` bind mount stayed active and shadowed
+    # the image's baked-in `.next` build output, so `next start` failed with
+    # "Could not find a production build" even though the build itself
+    # succeeded. `!reset` is Compose Specification's explicit "replace,
+    # don't merge" tag for exactly this.
+    volumes: !reset []
     environment:
       # Public hostnames the tunnel exposes (cip-preview-web -> :3000,
       # cip-preview-auth -> :8080) — must be reachable from the *visitor's*
