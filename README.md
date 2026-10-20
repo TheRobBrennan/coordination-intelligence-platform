@@ -188,3 +188,7 @@ See `docs/runbook.md` for the full demo flow (ingestion, seeding, the demo).
 - **Env-driven** — every endpoint/key/provider is an env var. Nothing hardcoded.
 - **Production-portable** — auth (Keycloak) and hosting can be replaced without
   touching app logic.
+
+## License
+
+[MIT](LICENSE) © 2026 Rob Brennan
