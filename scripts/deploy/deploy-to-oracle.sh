@@ -93,14 +93,27 @@ echo "==> Code + .env are on the VM at $REMOTE_DIR"
 # `docker ps` comes back empty seconds later. Always start detached.
 TUNNEL_COMPOSE="docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env --profile web --profile tunnel"
 
+# Every build leaves old layers and untagged images behind (about 1.5 GB a
+# deploy) on a disk shared with another project. Drop the untagged images and
+# keep only a 500 MB build cache so the next build stays fast. Never fatal: a
+# failed cleanup must not fail a deploy that already succeeded. Deliberately
+# no volume prune — that would delete data (Neo4j, Postgres).
+cleanup_vm() {
+  echo "==> Cleaning up old images and build cache"
+  $SSH "docker image prune -f >/dev/null && docker builder prune -f --reserved-space 500MB | tail -1; df -h / | tail -1" \
+    || echo "Cleanup skipped (deploy itself succeeded)."
+}
+
 case "$MODE" in
   up)
     echo "==> Rebuilding web + api on the VM (tunnel, Neo4j, and Keycloak stay up)..."
     $SSH "cd $REMOTE_DIR && $TUNNEL_COMPOSE up -d --build web api"
+    cleanup_vm
     ;;
   clean)
     echo "==> Full clean-slate bring-up on the VM (this drops the tunnel and wipes Neo4j data)..."
     $SSH "cd $REMOTE_DIR && make clean && $TUNNEL_COMPOSE up -d --build"
+    cleanup_vm
     ;;
   sync)
     echo "Sync only (no --up/--clean passed). To redeploy code with no downtime:"

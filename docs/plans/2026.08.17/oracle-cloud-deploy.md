@@ -184,6 +184,12 @@ committed, never logged.
 ./scripts/deploy/deploy-to-oracle.sh 163.192.26.57
 ```
 
+With `--up` or `--clean` the script finishes by pruning untagged images and
+trimming Docker's build cache to 500 MB on the VM, then prints the disk usage.
+Each build leaves about 1.5 GB behind, and the VM's 30 GB disk is shared with
+the Sploosh.AI hockey analytics app (its own user and Docker daemon). The
+cleanup never prunes volumes, so Neo4j and Postgres data are untouched.
+
 ## 5. Bring the stack up on the VM
 
 **Use `docker compose ... up -d`, not `make up-tunnel` directly, over SSH.**
