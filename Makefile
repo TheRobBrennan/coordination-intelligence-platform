@@ -15,6 +15,14 @@ COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 # use this, so they stay the localhost-only, tunnel-untouched path unconditionally.
 TUNNEL_COMPOSE := docker compose -f infra/docker-compose.yml -f infra/docker-compose.tunnel.yml --env-file .env
 
+# Teardown variant of TUNNEL_COMPOSE. down/clean/down-tunnel must load the tunnel
+# file (to reach cloudflared) but never need a real token, and compose interpolates
+# the required-variable check in cloudflared's command even for `down`. A throwaway
+# value (process env beats --env-file) keeps them working when TUNNEL_TOKEN is
+# unset, the documented local-only state. up-tunnel keeps using TUNNEL_COMPOSE, so
+# its check is unchanged.
+TUNNEL_DOWN_COMPOSE := TUNNEL_TOKEN=unused $(TUNNEL_COMPOSE)
+
 .DEFAULT_GOAL := help
 .PHONY: help up up-web down build clean logs ps check test test-ingest test-web test-web-headed up-tunnel down-tunnel logs-tunnel deploy deploy-clean deploy-sync
 
@@ -29,7 +37,7 @@ up-web:  ## Same as up, plus the Next.js web app (needs apps/web scaffolded)
 	$(COMPOSE) --profile web up --build
 
 down:  ## Stop everything (including the web/ingest/tunnel profiles, if running)
-	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down
+	$(TUNNEL_DOWN_COMPOSE) --profile web --profile ingest --profile tunnel down
 
 build:  ## Rebuild all images from scratch (no cache) and recreate containers
 	$(COMPOSE) build --no-cache
@@ -46,7 +54,7 @@ build:  ## Rebuild all images from scratch (no cache) and recreate containers
 # superset here — it still tears down the base stack correctly when the
 # tunnel was never touched, and additionally catches cloudflared when it was.
 clean:  ## Stop and wipe data volumes + built images (fresh slate, all profiles incl. tunnel)
-	$(TUNNEL_COMPOSE) --profile web --profile ingest --profile tunnel down -v --rmi local
+	$(TUNNEL_DOWN_COMPOSE) --profile web --profile ingest --profile tunnel down -v --rmi local
 
 logs:  ## Tail logs from all running services
 	$(COMPOSE) logs -f
@@ -75,8 +83,8 @@ up-tunnel:  ## Same as up-web, plus a public Cloudflare Tunnel preview — three
 	$(TUNNEL_COMPOSE) --profile web --profile tunnel up --build
 
 down-tunnel:  ## Stop the tunnel AND revert web/keycloak to local-only config (they keep running, recreated against the base compose file — not just "cloudflared removed")
-	$(TUNNEL_COMPOSE) --profile web --profile tunnel stop cloudflared
-	$(TUNNEL_COMPOSE) --profile web --profile tunnel rm -f cloudflared
+	$(TUNNEL_DOWN_COMPOSE) --profile web --profile tunnel stop cloudflared
+	$(TUNNEL_DOWN_COMPOSE) --profile web --profile tunnel rm -f cloudflared
 	$(COMPOSE) --profile web up -d --force-recreate web keycloak
 
 logs-tunnel:  ## Tail the tunnel container's logs (connection status, routed requests)
