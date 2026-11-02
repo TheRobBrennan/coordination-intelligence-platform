@@ -102,6 +102,30 @@ corrected at the source.
   (`feature/x`, `fix-y`) without the date prefix.
 - Branch off `main`, open a PR against `main` when ready.
 
+### Visuals in PRs
+
+**Every PR that adds or changes something a person can see needs it shown in the
+PR description, every time, even if the change looks small or cosmetic.**
+Visible means diagrams, images, SVGs (for example under `assets/` or `docs/`),
+README or docs layout, UI under `apps/web`, and anything else that renders.
+
+- **Put the image in the description**, not in a comment or only in the diff.
+  New visual: show it. Changed visual: show before and after side by side.
+- **Link by commit SHA**, e.g.
+  `https://raw.githubusercontent.com/<owner>/<repo>/<full-sha>/path/to/file.svg`.
+  A relative path does not render in a PR description, and a branch-name link
+  breaks when the branch is deleted.
+- **Render the real file** from the PR head, not a mock-up or a copy made only
+  for the description. For UI, screenshot the real running app (`make up-web`).
+  Check light and dark mode when the file supports both.
+- **A change with no visible effect** (code, dependencies, CI, docs text only)
+  gets the `no-visual-change` label instead, plus a Visuals section in the
+  description saying so.
+- **When opening a PR**, check the description before calling it done: visible
+  change means the image is there, otherwise the label is on.
+- **Then show Rob the real thing** before calling the PR done. A render Claude
+  looked at itself is not the same as Rob having seen it.
+
 ## Conventions
 
 - **Env-driven, nothing hardcoded.** Every endpoint/key/provider is in
