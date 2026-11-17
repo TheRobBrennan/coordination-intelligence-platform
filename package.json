@@ -19,7 +19,7 @@
     "test:web": "pnpm --filter web test"
   },
   "engines": {
-    "node": ">=24.17.0 <25",
+    "node": ">=26.13.1 <27",
     "pnpm": ">=11"
   },
   "packageManager": "pnpm@11.8.0"

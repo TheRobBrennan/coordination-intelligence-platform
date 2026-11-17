@@ -1,7 +1,7 @@
 # Full local dev stack for the Coordination Intelligence Platform PoC.
 # Everything runs in containers — the only thing you install on your machine is
 # Docker Desktop. Latest stable versions, pinned: Neo4j 2026.05, Keycloak 26.6,
-# Postgres 18, Python 3.14, Node 24.17.0 LTS, pnpm 11.8.0 — all in these images
+# Postgres 18, Python 3.14, Node 26.13.1 LTS, pnpm 11.8.0 — all in these images
 # and the per-app Dockerfiles, so the host stays clean.
 # All images are multi-arch and run natively on Apple Silicon (arm64) and x86.
 #

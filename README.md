@@ -162,7 +162,7 @@ share exported from a Docker host / VM. See
 Built and tested on a **2021 MacBook Pro (Apple M1 Max, 64 GB, macOS Tahoe
 26.5.1)**. All images are multi-arch, so they run natively on Apple Silicon
 (arm64) and on x86. **Latest stable across the board**, pinned: **Neo4j 2026.05**,
-**Keycloak 26.6**, **Postgres 18**, **Python 3.14**, **Node 24.17.0 LTS**
+**Keycloak 26.6**, **Postgres 18**, **Python 3.14**, **Node 26.13.1 LTS**
 (Krypton), **pnpm 11.8.0** — declared in `infra/docker-compose.yml`, the per-app
 `Dockerfile.dev` files, `.nvmrc`, and `package.json` (`engines` + `packageManager`).
 
@@ -172,7 +172,7 @@ If you'd rather run the API directly on your machine for faster reloads, you
 can — you'll need Python 3.14 + uv installed (`cd apps/api && uv run uvicorn
 app.main:app --reload`, or the shortcut `pnpm dev:api`). For the web app, use
 `pnpm dev:web`. With `nvm`, just `nvm use` in the repo
-root (it reads `.nvmrc` → Node 24.17.0); pnpm is pinned via `packageManager`,
+root (it reads `.nvmrc` → Node 26.13.1); pnpm is pinned via `packageManager`,
 so `corepack enable` makes the repo use 11.8.0 automatically. `pnpm start` /
 `stop` / `build` / `clean` are thin wrappers around the matching `make`
 target — they bring up the full containerized stack either way; see
