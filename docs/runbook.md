@@ -3,8 +3,8 @@
 ## 0. Prereqs
 - **Docker Desktop** — the only required install. Everything else runs in containers.
 - An LLM key: `ANTHROPIC_API_KEY` (default) or OpenAI/Azure if you flip `LLM_PROVIDER`.
-- (Optional, native path only) Python 3.14 + `uv`, Node 24 LTS + `pnpm` 11
-  (`nvm use` reads `.nvmrc` → 24.17.0) — see
+- (Optional, native path only) Python 3.14 + `uv`, Node 26 LTS + `pnpm` 11
+  (`nvm use` reads `.nvmrc` → 26.13.1) — see
   [guides/pnpm-for-npm-users.md](guides/pnpm-for-npm-users.md). Not needed for the `make` flow.
 
 ## 1. Bring up the stack
