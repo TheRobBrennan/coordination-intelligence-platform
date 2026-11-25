@@ -179,6 +179,7 @@ target — they bring up the full containerized stack either way; see
 [`docs/guides/pnpm-for-npm-users.md`](docs/guides/pnpm-for-npm-users.md) if pnpm is new to you.
 The containerized `make` flow above is the recommended default.
 
+See [`docs/monitoring-and-analytics.md`](docs/monitoring-and-analytics.md) for uptime checks.
 See `docs/runbook.md` for the full demo flow (ingestion, seeding, the demo).
 
 ## Constraints baked in
